@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Navigation, LogOut, Route, Clock, Shield, ArrowRight } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
+import MapView from "@/components/MapView";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
