@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -6,19 +6,18 @@ const TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined;
 
 interface MapViewProps {
   className?: string;
-  center?: [number, number]; // [lng, lat]
+  fallbackCenter?: [number, number]; // [lng, lat]
   zoom?: number;
-  marker?: boolean;
 }
 
 export default function MapView({
   className = "w-full h-full",
-  center = [120.9842, 14.5995], // Manila, PH
-  zoom = 12,
-  marker = true,
+  fallbackCenter = [120.9842, 14.5995], // Manila, PH
+  zoom = 14,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [status, setStatus] = useState<string>("Locating you…");
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -28,22 +27,42 @@ export default function MapView({
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/dark-v11",
-      center,
+      center: fallbackCenter,
       zoom,
-      attributionControl: true,
     });
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
-    if (marker) {
-      new mapboxgl.Marker({ color: "#e11d48" }).setLngLat(center).addTo(map);
-    }
+    const geolocate = new mapboxgl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showUserHeading: true,
+    });
+    map.addControl(geolocate, "top-right");
+
+    map.on("load", () => {
+      geolocate.trigger();
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const c: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+            map.flyTo({ center: c, zoom: 15, essential: true });
+            new mapboxgl.Marker({ color: "#e11d48" }).setLngLat(c).addTo(map);
+            setStatus("");
+          },
+          () => setStatus("Location unavailable — showing default area."),
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      } else {
+        setStatus("Geolocation not supported by your browser.");
+      }
+    });
 
     mapRef.current = map;
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, [center, zoom, marker]);
+  }, [fallbackCenter, zoom]);
 
   if (!TOKEN || TOKEN.includes("your_mapbox_public_token_here")) {
     return (
@@ -53,5 +72,14 @@ export default function MapView({
     );
   }
 
-  return <div ref={containerRef} className={className} />;
+  return (
+    <div className="relative w-full h-full">
+      <div ref={containerRef} className={className} />
+      {status && (
+        <div className="absolute top-3 left-3 z-10 px-3 py-1.5 rounded-md bg-background/80 backdrop-blur border border-border text-xs text-muted-foreground">
+          {status}
+        </div>
+      )}
+    </div>
+  );
 }
