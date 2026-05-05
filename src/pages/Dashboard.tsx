@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Navigation, LogOut, Route, Clock, Shield, ArrowRight } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
+import MapView from "@/components/MapView";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
@@ -102,6 +103,16 @@ const Dashboard = () => {
             <p className="text-sm text-muted-foreground">No trips yet. Your upcoming and past rides will show up here.</p>
           </Card>
         </div>
+
+        <Card className="p-2 bg-card border-border shadow-card overflow-hidden">
+          <div className="px-2 pt-1 pb-2 flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Your location</h2>
+            <span className="text-xs text-muted-foreground">Live map</span>
+          </div>
+          <div className="w-full h-[420px] rounded-md overflow-hidden">
+            <MapView className="w-full h-full" />
+          </div>
+        </Card>
 
         <div className="grid md:grid-cols-3 gap-6">
           {[
