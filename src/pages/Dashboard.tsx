@@ -104,6 +104,10 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        <Card className="p-2 bg-card border-border shadow-card overflow-hidden">
+          <MapView className="w-full h-[420px] rounded-md overflow-hidden" />
+        </Card>
+
         <div className="grid md:grid-cols-3 gap-6">
           {[
             { icon: Route, t: "Smarter routing", d: "Suggested paths based on your destination." },
