@@ -56,7 +56,7 @@ export default function SmartDropApp() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Sign in</Button>
             <Button size="sm" className="bg-gradient-brand text-primary-foreground hover:opacity-90 shadow-glow">
-              Get the app
+              Book a ride
             </Button>
             <Button variant="ghost" size="icon" className="md:hidden"><Menu /></Button>
           </div>
@@ -231,8 +231,8 @@ export default function SmartDropApp() {
             <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
               Join thousands of commuters making their daily travel smarter, safer, and more reliable.
             </p>
-            <Button size="lg" variant="secondary" className="h-12 px-8">
-              Download SmartDrop <ArrowRight className="ml-2 w-4 h-4" />
+            <Button size="lg" variant="secondary" className="h-12 px-8" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+              Book your ride <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </Card>
