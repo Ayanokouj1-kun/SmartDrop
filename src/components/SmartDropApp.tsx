@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   MapPin, Navigation, Clock, Shield, Bell, Route,
-  Car, Users, Star, ArrowRight, Menu, CheckCircle2
+  Users, ArrowRight, Menu, CheckCircle2, Sparkles
 } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.jpg";
 import heroImg from "@/assets/hero-city.jpg";
@@ -67,26 +67,25 @@ export default function SmartDropApp() {
       <section className="relative overflow-hidden">
         <img
           src={heroImg}
-          alt="Night city with glowing route trails"
+          alt="Roadway in the Philippines"
           width={1536}
           height={1024}
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
+          className="absolute inset-0 w-full h-full object-cover opacity-25"
         />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
-        <div className="absolute inset-0" style={{ background: "var(--gradient-glow)" }} />
 
         <div className="container relative py-24 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <Badge className="bg-primary/15 text-primary border border-primary/30 hover:bg-primary/15">
-              Ride with ease
+              <Sparkles className="w-3 h-3 mr-1" /> New system in development
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
               Organized commuting,{" "}
-              <span className="text-gradient-brand">on demand.</span>
+              <span className="text-gradient-brand">made simple.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl">
-              SmartDrop is a smarter way to get around the city. Book pick-ups, track your ride in real time,
-              and skip the waiting — built for daily commuters.
+              SmartDrop is a concept being built for Filipino commuters — a simpler way to book
+              pick-ups, plan routes, and travel with structure. We're just getting started.
             </p>
 
             {/* Booking card */}
@@ -117,23 +116,26 @@ export default function SmartDropApp() {
             </Card>
 
             <div className="flex items-center gap-6 pt-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Verified drivers</div>
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Live tracking</div>
+              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Concept project</div>
+              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Built for PH commuters</div>
             </div>
           </div>
 
-          {/* Stat cards */}
-          <div className="hidden lg:grid grid-cols-2 gap-4">
+          {/* Concept pillars */}
+          <div className="hidden lg:grid grid-cols-1 gap-4">
             {[
-              { icon: Car, k: "12K+", v: "Daily rides" },
-              { icon: Users, k: "8K+", v: "Active commuters" },
-              { icon: Clock, k: "3 min", v: "Avg. wait time" },
-              { icon: Star, k: "4.9", v: "Driver rating" },
-            ].map(({ icon: Icon, k, v }) => (
-              <Card key={v} className="p-6 bg-card/70 backdrop-blur-md border-border shadow-card">
-                <Icon className="w-6 h-6 text-primary mb-3" />
-                <div className="text-3xl font-bold">{k}</div>
-                <div className="text-sm text-muted-foreground">{v}</div>
+              { icon: Navigation, t: "Plan your trip", d: "Set pick-up and drop-off points before you leave home." },
+              { icon: Route, t: "Smarter routing", d: "Suggested paths based on your destination and area." },
+              { icon: Shield, t: "Driver accountability", d: "Drivers register and verify before accepting trips." },
+            ].map(({ icon: Icon, t, d }) => (
+              <Card key={t} className="p-5 bg-card/70 backdrop-blur-md border-border shadow-card flex gap-4 items-start">
+                <div className="w-10 h-10 rounded-lg bg-gradient-brand flex items-center justify-center flex-shrink-0 shadow-glow">
+                  <Icon className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <div className="font-semibold">{t}</div>
+                  <div className="text-sm text-muted-foreground">{d}</div>
+                </div>
               </Card>
             ))}
           </div>
@@ -226,13 +228,14 @@ export default function SmartDropApp() {
           <div className="absolute inset-0 opacity-20" style={{ background: "var(--gradient-glow)" }} />
           <div className="relative">
             <h2 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
-              Ready to ride with ease?
+              Be part of a new way to commute.
             </h2>
             <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              Join thousands of commuters making their daily travel smarter, safer, and more reliable.
+              SmartDrop is a new system being created — designed around the real needs of
+              Filipino commuters and drivers. Try the concept and explore what's possible.
             </p>
             <Button size="lg" variant="secondary" className="h-12 px-8" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
-              Book your ride <ArrowRight className="ml-2 w-4 h-4" />
+              Explore the concept <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </Card>
