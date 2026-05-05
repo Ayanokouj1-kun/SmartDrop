@@ -8,7 +8,7 @@ import {
   Users, ArrowRight, Menu, CheckCircle2, Sparkles
 } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
-import heroImg from "@/assets/hero-city.jpg";
+import MapView from "@/components/MapView";
 import { toast } from "sonner";
 
 const features = [
