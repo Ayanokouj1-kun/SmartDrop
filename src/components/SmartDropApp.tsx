@@ -54,8 +54,8 @@ export default function SmartDropApp() {
             <a href="#about" className="hover:text-foreground transition-smooth">About</a>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Sign in</Button>
-            <Button size="sm" className="bg-gradient-brand text-primary-foreground hover:opacity-90 shadow-glow">
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => (window.location.href = "/signin")}>Sign in</Button>
+            <Button size="sm" className="bg-gradient-brand text-primary-foreground hover:opacity-90 shadow-glow" onClick={() => (window.location.href = "/signin")}>
               Book a ride
             </Button>
             <Button variant="ghost" size="icon" className="md:hidden"><Menu /></Button>
