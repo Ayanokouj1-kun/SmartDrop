@@ -94,7 +94,7 @@ export default function SuperadminDashboard() {
     void load();
   }
 
-  async function overrideBooking(id: string, status: string) {
+  async function overrideBooking(id: string, status: "pending" | "confirmed" | "completed" | "cancelled" | "rejected") {
     const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     if (user) await supabase.from("audit_logs").insert({ actor_id: user.id, action: `booking.override.${status}`, entity_type: "booking", entity_id: id });
@@ -199,7 +199,7 @@ export default function SuperadminDashboard() {
               </div>
               <div className="flex items-center gap-1">
                 <Badge variant="outline">{b.status}</Badge>
-                {["confirmed", "cancelled", "completed"].map((s) => (
+                {(["confirmed", "cancelled", "completed"] as const).map((s) => (
                   <Button key={s} size="sm" variant="ghost" disabled={b.status === s} onClick={() => overrideBooking(b.id, s)}>{s}</Button>
                 ))}
               </div>
