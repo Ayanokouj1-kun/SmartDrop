@@ -76,9 +76,6 @@ export default function SmartDropApp() {
 
         <div className="container relative py-24 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <Badge className="bg-primary/15 text-primary border border-primary/30 hover:bg-primary/15">
-              <Sparkles className="w-3 h-3 mr-1" /> New system in development
-            </Badge>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
               Organized commuting,{" "}
               <span className="text-gradient-brand">made simple.</span>
@@ -116,8 +113,6 @@ export default function SmartDropApp() {
             </Card>
 
             <div className="flex items-center gap-6 pt-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Concept project</div>
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Built for PH commuters</div>
             </div>
           </div>
 
@@ -145,7 +140,6 @@ export default function SmartDropApp() {
       {/* FEATURES */}
       <section id="features" className="container py-24">
         <div className="max-w-2xl mb-12">
-          <Badge className="bg-primary/15 text-primary border border-primary/30 mb-4">Features</Badge>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
             Everything you need for a <span className="text-gradient-brand">smoother commute</span>
           </h2>
@@ -167,7 +161,6 @@ export default function SmartDropApp() {
       <section id="how" className="border-y border-border bg-card/30">
         <div className="container py-24">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <Badge className="bg-primary/15 text-primary border border-primary/30 mb-4">How it works</Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Three steps to ride</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -185,7 +178,6 @@ export default function SmartDropApp() {
       {/* ABOUT */}
       <section id="about" className="container py-24 grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <Badge className="bg-primary/15 text-primary border border-primary/30 mb-4">About SmartDrop</Badge>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
             Built to solve <span className="text-gradient-brand">real commuter problems</span>
           </h2>
@@ -247,11 +239,6 @@ export default function SmartDropApp() {
           <div className="flex items-center gap-2">
             <img src={logo} alt="SmartDrop" width={24} height={24} className="rounded" />
             <span>© 2026 SmartDrop. Ride with ease.</span>
-          </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground transition-smooth">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-smooth">Terms</a>
-            <a href="#" className="hover:text-foreground transition-smooth">Contact</a>
           </div>
         </div>
       </footer>
