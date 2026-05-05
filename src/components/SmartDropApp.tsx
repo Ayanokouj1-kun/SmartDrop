@@ -7,7 +7,7 @@ import {
   MapPin, Navigation, Clock, Shield, Bell, Route,
   Users, ArrowRight, Menu, CheckCircle2, Sparkles
 } from "lucide-react";
-import logo from "@/assets/smartdrop-logo.jpg";
+import logo from "@/assets/smartdrop-logo.png";
 import heroImg from "@/assets/hero-city.jpg";
 import { toast } from "sonner";
 
