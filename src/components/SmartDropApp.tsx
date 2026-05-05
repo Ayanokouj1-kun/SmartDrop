@@ -8,7 +8,7 @@ import {
   Users, ArrowRight, Menu, CheckCircle2, Sparkles
 } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
-import heroImg from "@/assets/hero-city.jpg";
+import MapView from "@/components/MapView";
 import { toast } from "sonner";
 
 const features = [
@@ -65,13 +65,9 @@ export default function SmartDropApp() {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <img
-          src={heroImg}
-          alt="Roadway in the Philippines"
-          width={1536}
-          height={1024}
-          className="absolute inset-0 w-full h-full object-cover opacity-25"
-        />
+        <div className="absolute inset-0 opacity-40">
+          <MapView className="w-full h-full" marker={false} />
+        </div>
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
 
         <div className="container relative py-24 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
