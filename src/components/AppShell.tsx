@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,8 +16,29 @@ export default function AppShell({ title, nav, children }: { title: string; nav:
   const { user, highest } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "User";
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const avatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        setDisplayName(
+          data?.username ||
+          data?.display_name ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email ||
+          "User"
+        );
+      });
+  }, [user?.id]);
+
+  const name = displayName ?? user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? user?.email ?? "User";
 
   const roleColor =
     highest === "superadmin" ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
@@ -33,11 +54,11 @@ export default function AppShell({ title, nav, children }: { title: string; nav:
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/70 border-b border-border">
         <nav className="container flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <img src={logo} alt="SmartDrop" width={32} height={32} className="rounded-lg" />
             <span className="font-bold tracking-tight">SmartDrop</span>
             <Badge className={`ml-2 border ${roleColor}`}>{highest}</Badge>
-          </Link>
+          </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             {nav.map((n) => (
               <Link key={n.to} to={n.to}

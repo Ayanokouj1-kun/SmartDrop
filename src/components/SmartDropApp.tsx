@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useInView } from "@/hooks/useInView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -29,6 +30,13 @@ const steps = [
 export default function SmartDropApp() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
+
+  const [featHeadRef, featHeadInView] = useInView<HTMLDivElement>();
+  const [featGridRef, featGridInView] = useInView<HTMLDivElement>();
+  const [howHeadRef, howHeadInView] = useInView<HTMLDivElement>();
+  const [stepsRef, stepsInView] = useInView<HTMLDivElement>();
+  const [aboutRef, aboutInView] = useInView<HTMLElement>();
+  const [ctaRef, ctaInView] = useInView<HTMLElement>();
 
   const handleBook = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,14 +147,14 @@ export default function SmartDropApp() {
 
       {/* FEATURES */}
       <section id="features" className="container py-24">
-        <div className="max-w-2xl mb-12">
+        <div ref={featHeadRef} className={`max-w-2xl mb-12 scroll-reveal${featHeadInView ? " is-visible" : ""}`}>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
             Everything you need for a <span className="text-gradient-brand">smoother commute</span>
           </h2>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <Card key={title} className="p-6 bg-card border-border hover:border-primary/40 transition-smooth shadow-card group">
+        <div ref={featGridRef} className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map(({ icon: Icon, title, desc }, i) => (
+            <Card key={title} className={`p-6 bg-card border-border hover:border-primary/40 transition-smooth shadow-card group scroll-reveal scroll-delay-${(i + 1) * 100}${featGridInView ? " is-visible" : ""}`}>
               <div className="w-12 h-12 rounded-xl bg-gradient-brand flex items-center justify-center mb-4 shadow-glow group-hover:scale-110 transition-smooth">
                 <Icon className="w-6 h-6 text-primary-foreground" />
               </div>
@@ -160,12 +168,12 @@ export default function SmartDropApp() {
       {/* HOW IT WORKS */}
       <section id="how" className="border-y border-border bg-card/30">
         <div className="container py-24">
-          <div className="text-center max-w-2xl mx-auto mb-12">
+          <div ref={howHeadRef} className={`text-center max-w-2xl mx-auto mb-12 scroll-reveal${howHeadInView ? " is-visible" : ""}`}>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Three steps to ride</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {steps.map((s) => (
-              <Card key={s.n} className="p-8 bg-card border-border shadow-card relative overflow-hidden">
+          <div ref={stepsRef} className="grid md:grid-cols-3 gap-6">
+            {steps.map((s, i) => (
+              <Card key={s.n} className={`p-8 bg-card border-border shadow-card relative overflow-hidden scroll-reveal scroll-delay-${(i + 1) * 100}${stepsInView ? " is-visible" : ""}`}>
                 <div className="text-6xl font-bold text-gradient-brand mb-4">{s.n}</div>
                 <h3 className="font-semibold text-xl mb-2">{s.title}</h3>
                 <p className="text-muted-foreground">{s.desc}</p>
@@ -176,8 +184,8 @@ export default function SmartDropApp() {
       </section>
 
       {/* ABOUT */}
-      <section id="about" className="container py-24 grid lg:grid-cols-2 gap-12 items-center">
-        <div>
+      <section id="about" ref={aboutRef} className="container py-24 grid lg:grid-cols-2 gap-12 items-center">
+        <div className={`scroll-reveal${aboutInView ? " is-visible" : ""}`}>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
             Built to solve <span className="text-gradient-brand">real commuter problems</span>
           </h2>
@@ -191,7 +199,7 @@ export default function SmartDropApp() {
             and user-friendly — for commuters, drivers, and operators alike.
           </p>
         </div>
-        <Card className="p-8 bg-card border-border shadow-card">
+        <Card className={`p-8 bg-card border-border shadow-card scroll-reveal scroll-delay-200${aboutInView ? " is-visible" : ""}`}>
           <h3 className="font-semibold text-xl mb-6">Who SmartDrop is for</h3>
           <ul className="space-y-4">
             {[
@@ -214,8 +222,8 @@ export default function SmartDropApp() {
       </section>
 
       {/* CTA */}
-      <section className="container pb-24">
-        <Card className="relative overflow-hidden p-12 md:p-16 text-center border-border shadow-glow"
+      <section ref={ctaRef} className="container pb-24">
+        <Card className={`relative overflow-hidden p-12 md:p-16 text-center border-border shadow-glow scroll-reveal-zoom${ctaInView ? " is-visible" : ""}`}
               style={{ background: "var(--gradient-brand)" }}>
           <div className="absolute inset-0 opacity-20" style={{ background: "var(--gradient-glow)" }} />
           <div className="relative">
