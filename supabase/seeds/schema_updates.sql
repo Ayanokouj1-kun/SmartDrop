@@ -5,6 +5,10 @@
 -- 1. Driver role enum (if not already added)
 ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'driver';
 
+-- 1b. booking_status enum — add new transit statuses
+ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'picked_up';
+ALTER TYPE booking_status ADD VALUE IF NOT EXISTS 'on_the_way';
+
 -- 2. driver_id column on bookings (if not already added)
 ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
@@ -28,11 +32,13 @@ CREATE TABLE IF NOT EXISTS public.ratings (
 
 ALTER TABLE public.ratings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "users can insert own ratings" ON public.ratings
+DROP POLICY IF EXISTS "users can insert own ratings" ON public.ratings;
+CREATE POLICY "users can insert own ratings" ON public.ratings
   FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "authenticated can view ratings" ON public.ratings
+DROP POLICY IF EXISTS "authenticated can view ratings" ON public.ratings;
+CREATE POLICY "authenticated can view ratings" ON public.ratings
   FOR SELECT TO authenticated USING (true);
 
 -- 5. Platform settings table
@@ -44,10 +50,12 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
 
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "authenticated can read settings" ON public.platform_settings
+DROP POLICY IF EXISTS "authenticated can read settings" ON public.platform_settings;
+CREATE POLICY "authenticated can read settings" ON public.platform_settings
   FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY IF NOT EXISTS "superadmin can manage settings" ON public.platform_settings
+DROP POLICY IF EXISTS "superadmin can manage settings" ON public.platform_settings;
+CREATE POLICY "superadmin can manage settings" ON public.platform_settings
   FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'superadmin'));
 
@@ -60,37 +68,43 @@ INSERT INTO public.platform_settings (key, value) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- 6. RLS: drivers can view and update bookings
-CREATE POLICY IF NOT EXISTS "drivers can view bookings" ON public.bookings
+DROP POLICY IF EXISTS "drivers can view bookings" ON public.bookings;
+CREATE POLICY "drivers can view bookings" ON public.bookings
   FOR SELECT TO authenticated
   USING (has_role(auth.uid(), 'driver'));
 
-CREATE POLICY IF NOT EXISTS "drivers can update bookings" ON public.bookings
+DROP POLICY IF EXISTS "drivers can update bookings" ON public.bookings;
+CREATE POLICY "drivers can update bookings" ON public.bookings
   FOR UPDATE TO authenticated
   USING (has_role(auth.uid(), 'driver'));
 
--- 7. Driver accounts (run once — safe if already exist due to ON CONFLICT)
+-- 7. Driver accounts — insert if not exists, then upsert profiles/roles using real IDs
 DO $$
 DECLARE
-  d1 uuid := gen_random_uuid();
-  d2 uuid := gen_random_uuid();
-  d3 uuid := gen_random_uuid();
+  d1 uuid; d2 uuid; d3 uuid;
 BEGIN
+  -- Insert new accounts only if the email doesn't exist yet
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
     is_super_admin, created_at, updated_at,
     confirmation_token, recovery_token, email_change_token_new, email_change
   ) VALUES
-    (d1,'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
+    (gen_random_uuid(),'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
      'driver01@smartdrop.app', crypt('driver', gen_salt('bf')),
      now(),'{"provider":"email","providers":["email"]}','{}',false,now(),now(),'','','',''),
-    (d2,'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
+    (gen_random_uuid(),'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
      'driver02@smartdrop.app', crypt('driver', gen_salt('bf')),
      now(),'{"provider":"email","providers":["email"]}','{}',false,now(),now(),'','','',''),
-    (d3,'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
+    (gen_random_uuid(),'00000000-0000-0000-0000-000000000000','authenticated','authenticated',
      'driver03@smartdrop.app', crypt('driver', gen_salt('bf')),
      now(),'{"provider":"email","providers":["email"]}','{}',false,now(),now(),'','','','')
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT DO NOTHING;
+
+  -- Look up the real IDs (works whether just inserted or already existed)
+  SELECT id INTO d1 FROM auth.users WHERE email = 'driver01@smartdrop.app';
+  SELECT id INTO d2 FROM auth.users WHERE email = 'driver02@smartdrop.app';
+  SELECT id INTO d3 FROM auth.users WHERE email = 'driver03@smartdrop.app';
 
   INSERT INTO public.profiles (user_id, display_name, email, username, is_active, vehicle_type, plate_number)
   VALUES
@@ -104,3 +118,4 @@ BEGIN
     (d1, 'driver'), (d2, 'driver'), (d3, 'driver')
   ON CONFLICT DO NOTHING;
 END $$;
+

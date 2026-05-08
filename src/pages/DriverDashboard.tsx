@@ -126,11 +126,13 @@ export default function DriverDashboard() {
 
   async function updateStatus(id: string, status: string) {
     if (status === "confirmed" && user) {
-      // Atomic claim — only succeeds if no driver has taken it yet
+      // Atomic claim — works for both unclaimed rides (driver_id is null)
+      // and admin-pre-assigned rides (driver_id already = user.id)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("bookings") as any)
         .update({ status: "confirmed", driver_id: user.id })
-        .eq("id", id).eq("status", "pending").is("driver_id", null)
+        .eq("id", id).eq("status", "pending")
+        .or(`driver_id.is.null,driver_id.eq.${user.id}`)
         .select("id");
       if (error) return toast.error(error.message);
       if (!data || data.length === 0) {

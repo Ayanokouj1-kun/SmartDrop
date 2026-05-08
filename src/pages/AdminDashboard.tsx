@@ -136,11 +136,14 @@ export default function AdminDashboard() {
   }
 
   const driverName = (uid: string) => { const d = drivers.find((d) => d.user_id === uid); return d?.display_name ?? d?.email?.split("@")[0] ?? "Driver"; };
-  async function assignDriver(bookingId: string, driverId: string | null) {
+  async function assignDriver(bookingId: string, driverId: string | null, currentStatus: string) {
+    // When assigning a driver to a pending booking, confirm it immediately
+    const patch: Record<string, unknown> = { driver_id: driverId };
+    if (driverId && currentStatus === "pending") patch.status = "confirmed";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("bookings").update({ driver_id: driverId }).eq("id", bookingId);
+    const { error } = await (supabase as any).from("bookings").update(patch).eq("id", bookingId);
     if (error) return toast.error(error.message);
-    toast.success(driverId ? "Driver assigned!" : "Driver removed");
+    toast.success(driverId ? "Driver assigned & booking confirmed!" : "Driver removed");
     setDriverSelect((prev) => { const next = { ...prev }; delete next[bookingId]; return next; });
     void load();
   }
@@ -390,7 +393,7 @@ export default function AdminDashboard() {
                             <User className="w-3 h-3 text-violet-400 shrink-0" />
                             <span className="text-muted-foreground">Driver:</span>
                             <span className="font-medium text-violet-300">{driverName(b.driver_id)}</span>
-                            <button onClick={() => void assignDriver(b.id, null)} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                            <button onClick={() => void assignDriver(b.id, null, b.status)} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
                           </div>
                         ) : drivers.length > 0 ? (
                           <>
@@ -399,7 +402,7 @@ export default function AdminDashboard() {
                               <option value="">Assign driver…</option>
                               {drivers.map((d) => <option key={d.user_id} value={d.user_id}>{driverName(d.user_id)}</option>)}
                             </select>
-                            <button disabled={!driverSelect[b.id]} onClick={() => { const id = driverSelect[b.id]; if (id) void assignDriver(b.id, id); }}
+                            <button disabled={!driverSelect[b.id]} onClick={() => { const id = driverSelect[b.id]; if (id) void assignDriver(b.id, id, b.status); }}
                               className="h-7 px-2.5 text-xs rounded-md border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
                               Assign
                             </button>
