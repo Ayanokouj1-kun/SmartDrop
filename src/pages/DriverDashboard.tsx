@@ -26,11 +26,23 @@ interface Service { id: string; name: string; }
 interface Branch  { id: string; name: string; }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:   "border-amber-500/40 text-amber-400",
-  confirmed: "border-cyan-500/40 text-cyan-400",
-  completed: "border-emerald-500/40 text-emerald-400",
-  cancelled: "border-red-500/40 text-red-400",
-  rejected:  "border-gray-500/40 text-gray-400",
+  pending:    "border-amber-500/40 text-amber-400",
+  confirmed:  "border-cyan-500/40 text-cyan-400",
+  picked_up:  "border-blue-500/40 text-blue-400",
+  on_the_way: "border-violet-500/40 text-violet-400",
+  completed:  "border-emerald-500/40 text-emerald-400",
+  cancelled:  "border-red-500/40 text-red-400",
+  rejected:   "border-gray-500/40 text-gray-400",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending:    "Pending",
+  confirmed:  "Accepted",
+  picked_up:  "Picked Up",
+  on_the_way: "On The Way",
+  completed:  "Completed",
+  cancelled:  "Cancelled",
+  rejected:   "Declined",
 };
 
 export default function DriverDashboard() {
@@ -59,9 +71,10 @@ export default function DriverDashboard() {
       supabase.from("bookings").select("*").eq("status", "pending")
         .or(`driver_id.is.null,driver_id.eq.${user.id}`)
         .order("booking_date", { ascending: true }),
-      // Active: confirmed rides assigned to this driver
+      // Active: my in-progress rides (confirmed / picked_up / on_the_way)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from("bookings") as any).select("*").eq("status", "confirmed").eq("driver_id", user.id)
+      (supabase.from("bookings") as any).select("*")
+        .in("status", ["confirmed", "picked_up", "on_the_way"]).eq("driver_id", user.id)
         .order("booking_date", { ascending: true }),
       // History: completed/rejected/cancelled rides this driver handled
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,8 +98,8 @@ export default function DriverDashboard() {
     }
   }
 
-  const pending   = useMemo(() => activeBookings.filter((b) => b.status === "pending"),   [activeBookings]);
-  const confirmed = useMemo(() => activeBookings.filter((b) => b.status === "confirmed"), [activeBookings]);
+  const pending    = useMemo(() => activeBookings.filter((b) => b.status === "pending"), [activeBookings]);
+  const inProgress = useMemo(() => activeBookings.filter((b) => ["confirmed", "picked_up", "on_the_way"].includes(b.status)), [activeBookings]);
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const completedToday = useMemo(
@@ -96,6 +109,11 @@ export default function DriverDashboard() {
   const earningsToday = useMemo(
     () => completedToday.reduce((s, b) => s + Number(b.amount), 0),
     [completedToday],
+  );
+  const startOfWeek = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - d.getDay()); return d; }, []);
+  const earningsWeek = useMemo(
+    () => historyBookings.filter((b) => b.status === "completed" && new Date(b.booking_date) >= startOfWeek).reduce((s, b) => s + Number(b.amount), 0),
+    [historyBookings, startOfWeek],
   );
 
   const parseNotes  = (notes: string | null) => { try { return notes ? JSON.parse(notes) : null; } catch { return null; } };
@@ -124,16 +142,15 @@ export default function DriverDashboard() {
       void load();
       return;
     }
-    const { error } = await supabase.from("bookings").update({ status: status as "completed" | "rejected" | "cancelled" }).eq("id", id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("bookings") as any).update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     const labels: Record<string, string> = { completed: "Ride completed!", rejected: "Ride declined." };
     toast.success(labels[status] ?? "Status updated");
     void load();
   }
 
-  function BookingCard({ b, showAccept = false, showComplete = false }: {
-    b: Booking; showAccept?: boolean; showComplete?: boolean;
-  }) {
+  function BookingCard({ b }: { b: Booking }) {
     const meta = parseNotes(b.notes);
     return (
       <div className="p-4 rounded-xl bg-secondary border border-border space-y-3">
@@ -146,7 +163,7 @@ export default function DriverDashboard() {
             <span className="font-medium text-sm">{customerName(b.user_id)}</span>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[b.status] ?? ""}`}>
-            {b.status}
+            {STATUS_LABELS[b.status] ?? b.status}
           </span>
         </div>
 
@@ -172,42 +189,45 @@ export default function DriverDashboard() {
 
         {/* Service + time */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-amber-400" />
-            {serviceName(b.service_id)}
-          </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            {new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-          </span>
+          <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" />{serviceName(b.service_id)}</span>
+          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
         </div>
 
         {/* Amount + branch */}
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1 font-bold text-emerald-400 text-sm">
-            <DollarSign className="w-3.5 h-3.5" />₱{Number(b.amount).toFixed(0)}
-          </span>
+          <span className="flex items-center gap-1 font-bold text-emerald-400 text-sm"><DollarSign className="w-3.5 h-3.5" />₱{Number(b.amount).toFixed(0)}</span>
           <span className="text-xs text-muted-foreground">{branchName(b.branch_id)}</span>
         </div>
 
-        {/* Actions */}
-        {showAccept && (
+        {/* Status-driven action buttons */}
+        {b.status === "pending" && (
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border">
-            <Button size="sm" onClick={() => updateStatus(b.id, "confirmed")}
-              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
+            <Button size="sm" onClick={() => updateStatus(b.id, "confirmed")} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Accept
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => updateStatus(b.id, "rejected")}
-              className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
+            <Button size="sm" variant="ghost" onClick={() => updateStatus(b.id, "rejected")} className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
               <X className="w-3.5 h-3.5 mr-1" />Decline
             </Button>
           </div>
         )}
-        {showComplete && (
+        {b.status === "confirmed" && (
           <div className="pt-1 border-t border-border">
-            <Button size="sm" onClick={() => updateStatus(b.id, "completed")}
-              className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-500 text-white">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Mark as Completed
+            <Button size="sm" onClick={() => updateStatus(b.id, "picked_up")} className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-500 text-white">
+              <MapPin className="w-3.5 h-3.5 mr-1" />Mark as Picked Up
+            </Button>
+          </div>
+        )}
+        {b.status === "picked_up" && (
+          <div className="pt-1 border-t border-border">
+            <Button size="sm" onClick={() => updateStatus(b.id, "on_the_way")} className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-500 text-white">
+              <Navigation2 className="w-3.5 h-3.5 mr-1" />Mark On The Way
+            </Button>
+          </div>
+        )}
+        {b.status === "on_the_way" && (
+          <div className="pt-1 border-t border-border">
+            <Button size="sm" onClick={() => updateStatus(b.id, "completed")} className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Complete Ride
             </Button>
           </div>
         )}
@@ -248,20 +268,20 @@ export default function DriverDashboard() {
         </Card>
         <Card className="p-4 bg-card border-border shadow-card">
           <div className="text-xs text-muted-foreground mb-1">Active</div>
-          <div className="text-2xl font-bold text-cyan-400">{confirmed.length}</div>
+          <div className="text-2xl font-bold text-cyan-400">{inProgress.length}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">in progress</div>
         </Card>
         <Card className="p-4 bg-card border-border shadow-card">
-          <div className="text-xs text-muted-foreground mb-1">Completed Today</div>
+          <div className="text-xs text-muted-foreground mb-1">Done Today</div>
           <div className="text-2xl font-bold text-emerald-400">{completedToday.length}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">rides done</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">₱{earningsToday.toFixed(0)} earned</div>
         </Card>
         <Card className="p-4 bg-card border-border shadow-card">
           <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />Earnings Today
+            <TrendingUp className="w-3 h-3" />This Week
           </div>
-          <div className="text-2xl font-bold text-violet-400">₱{earningsToday.toFixed(0)}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">total today</div>
+          <div className="text-2xl font-bold text-violet-400">₱{earningsWeek.toFixed(0)}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">total earnings</div>
         </Card>
       </div>
 
@@ -278,9 +298,9 @@ export default function DriverDashboard() {
           </TabsTrigger>
           <TabsTrigger value="active" className="gap-1.5">
             Active
-            {confirmed.length > 0 && (
+            {inProgress.length > 0 && (
               <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded-full font-medium">
-                {confirmed.length}
+                {inProgress.length}
               </span>
             )}
           </TabsTrigger>
@@ -302,21 +322,21 @@ export default function DriverDashboard() {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {pending.map((b) => <BookingCard key={b.id} b={b} showAccept />)}
+              {pending.map((b) => <BookingCard key={b.id} b={b} />)}
             </div>
           )}
         </TabsContent>
 
         {/* Active */}
         <TabsContent value="active">
-          {confirmed.length === 0 ? (
+          {inProgress.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
               <Car className="w-8 h-8 opacity-30" />
               <span className="text-sm">No active rides right now.</span>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {confirmed.map((b) => <BookingCard key={b.id} b={b} showComplete />)}
+              {inProgress.map((b) => <BookingCard key={b.id} b={b} />)}
             </div>
           )}
         </TabsContent>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, MapPin, Navigation2, X, Clock, DollarSign, CheckCircle2, Circle, Zap, User } from "lucide-react";
+import { Calendar, MapPin, Navigation2, X, Clock, DollarSign, CheckCircle2, Circle, Zap, User, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Service { id: string; name: string; price: number; branch_id: string; description: string | null; available_from: string | null; available_to: string | null; }
@@ -15,23 +15,36 @@ interface Branch { id: string; name: string; location: string | null; }
 interface Booking { id: string; booking_date: string; status: string; amount: number; service_id: string; branch_id: string; notes: string | null; driver_id: string | null; }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:   "border-amber-500/40 text-amber-400",
-  confirmed: "border-cyan-500/40 text-cyan-400",
-  completed: "border-emerald-500/40 text-emerald-400",
-  cancelled: "border-red-500/40 text-red-400",
-  rejected:  "border-gray-500/40 text-gray-400",
+  pending:    "border-amber-500/40 text-amber-400",
+  confirmed:  "border-cyan-500/40 text-cyan-400",
+  picked_up:  "border-blue-500/40 text-blue-400",
+  on_the_way: "border-violet-500/40 text-violet-400",
+  completed:  "border-emerald-500/40 text-emerald-400",
+  cancelled:  "border-red-500/40 text-red-400",
+  rejected:   "border-gray-500/40 text-gray-400",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending:    "Pending",
+  confirmed:  "Accepted",
+  picked_up:  "Picked Up",
+  on_the_way: "On The Way",
+  completed:  "Completed",
+  cancelled:  "Cancelled",
+  rejected:   "Declined",
 };
 
 const RIDE_STEPS = [
-  { key: "pending",   label: "Submitted" },
-  { key: "confirmed", label: "Confirmed" },
-  { key: "completed", label: "Completed" },
+  { key: "pending",    label: "Submitted"  },
+  { key: "confirmed",  label: "Accepted"   },
+  { key: "picked_up",  label: "Picked Up"  },
+  { key: "on_the_way", label: "On The Way" },
+  { key: "completed",  label: "Completed"  },
 ];
 
 function getStepIdx(status: string) {
-  if (status === "completed") return 2;
-  if (status === "confirmed") return 1;
-  return 0;
+  const map: Record<string, number> = { pending: 0, confirmed: 1, picked_up: 2, on_the_way: 3, completed: 4 };
+  return map[status] ?? 0;
 }
 
 export default function UserDashboard() {
@@ -48,6 +61,10 @@ export default function UserDashboard() {
   const [route, setRoute] = useState<RouteInfo | null>(null);
   const [driverProfile, setDriverProfile] = useState<{ display_name: string | null; email: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [ratingBookingId, setRatingBookingId] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratedIds, setRatedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => { void load(); }, [user]);
 
@@ -125,6 +142,16 @@ export default function UserDashboard() {
     void load();
   }
 
+  async function submitRating(bookingId: string, driverId: string | null, stars: number) {
+    if (!user || !driverId) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("ratings").insert({ booking_id: bookingId, user_id: user.id, driver_id: driverId, rating: stars, comment: ratingComment });
+    if (error) return toast.error(error.message);
+    toast.success(`Rated ${stars} ★ — Thank you!`);
+    setRatedIds((prev) => new Set(prev).add(bookingId));
+    setRatingBookingId(null); setRatingValue(0); setRatingComment("");
+  }
+
   const branchName = (id: string) => branches.find((b) => b.id === id)?.name ?? "—";
   const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "Service";
 
@@ -133,7 +160,7 @@ export default function UserDashboard() {
   };
 
   const selectedSvc = services.find((s) => s.id === serviceId);
-  const activeBooking = useMemo(() => bookings.find((b) => b.status === "pending" || b.status === "confirmed"), [bookings]);
+  const activeBooking = useMemo(() => bookings.find((b) => ["pending","confirmed","picked_up","on_the_way"].includes(b.status)), [bookings]);
   const activeMeta = useMemo(() => parseNotes(activeBooking?.notes ?? null), [activeBooking]);
   const activeStep = activeBooking ? getStepIdx(activeBooking.status) : -1;
 
@@ -227,7 +254,7 @@ export default function UserDashboard() {
                   </span>
                   Active Ride
                 </h2>
-                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[activeBooking.status] ?? ""}`}>{activeBooking.status}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[activeBooking.status] ?? ""}`}>{STATUS_LABELS[activeBooking.status] ?? activeBooking.status}</span>
               </div>
 
               {/* Progress steps */}
@@ -291,7 +318,7 @@ export default function UserDashboard() {
                 </div>
               )}
 
-              {(activeBooking.status === "pending" || activeBooking.status === "confirmed") && (
+              {activeBooking.status === "pending" && (
                 <Button size="sm" variant="ghost" onClick={() => cancel(activeBooking.id)}
                   className="w-full h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
                   <X className="w-3 h-3 mr-1" />Cancel booking
@@ -311,7 +338,7 @@ export default function UserDashboard() {
                 <div key={b.id} className="p-3 rounded-lg bg-secondary border border-border space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-medium text-sm">{serviceName(b.service_id)}</div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[b.status] ?? ""}`}>{b.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[b.status] ?? ""}`}>{STATUS_LABELS[b.status] ?? b.status}</span>
                   </div>
                   {meta && (
                     <div className="space-y-1">
@@ -335,10 +362,34 @@ export default function UserDashboard() {
                       <span>{Math.round(meta.durationMin ?? 0)} min est.</span>
                     </div>
                   )}
-                  {(b.status === "pending" || b.status === "confirmed") && (
+                  {b.status === "pending" && (
                     <Button size="sm" variant="ghost" onClick={() => cancel(b.id)} className="w-full h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
                       <X className="w-3 h-3 mr-1" />Cancel booking
                     </Button>
+                  )}
+                  {b.status === "completed" && !ratedIds.has(b.id) && (
+                    ratingBookingId === b.id ? (
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <div className="flex gap-1 justify-center">
+                          {[1,2,3,4,5].map((star) => (
+                            <button key={star} onClick={() => setRatingValue(star)}
+                              className={`text-xl transition-colors ${star <= ratingValue ? "text-amber-400" : "text-muted-foreground/30"}`}>
+                              <Star className="w-5 h-5 fill-current" />
+                            </button>
+                          ))}
+                        </div>
+                        <input placeholder="Comment (optional)" value={ratingComment} onChange={(e) => setRatingComment(e.target.value)}
+                          className="w-full h-7 rounded-md border border-border bg-background px-2 text-xs" />
+                        <div className="flex gap-2">
+                          <Button size="sm" disabled={ratingValue === 0} onClick={() => void submitRating(b.id, b.driver_id, ratingValue)} className="flex-1 h-7 text-xs">Submit</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setRatingBookingId(null)} className="h-7 text-xs">Cancel</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => setRatingBookingId(b.id)} className="w-full h-7 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 border border-amber-500/20">
+                        <Star className="w-3 h-3 mr-1" />Rate Driver
+                      </Button>
+                    )
                   )}
                 </div>
               );

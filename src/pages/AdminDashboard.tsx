@@ -43,21 +43,35 @@ interface Booking { id: string; booking_date: string; status: string; amount: nu
 interface Driver  { user_id: string; display_name: string | null; email: string | null; }
 interface Profile { user_id: string; display_name: string | null; email: string | null; username: string | null; }
 
-const STATUSES = ["pending", "confirmed", "completed", "cancelled", "rejected"] as const;
+const STATUSES = ["pending", "confirmed", "picked_up", "on_the_way", "completed", "cancelled", "rejected"] as const;
 type Status = typeof STATUSES[number];
 
+const STATUS_LABELS: Record<string, string> = {
+  pending:    "Pending",
+  confirmed:  "Accepted",
+  picked_up:  "Picked Up",
+  on_the_way: "On The Way",
+  completed:  "Completed",
+  cancelled:  "Cancelled",
+  rejected:   "Rejected",
+};
+
 const STATUS_COLORS: Record<string, string> = {
-  pending:   "border-amber-500/40 text-amber-400",
-  confirmed: "border-cyan-500/40 text-cyan-400",
-  completed: "border-emerald-500/40 text-emerald-400",
-  cancelled: "border-red-500/40 text-red-400",
-  rejected:  "border-gray-500/40 text-gray-400",
+  pending:    "border-amber-500/40 text-amber-400",
+  confirmed:  "border-cyan-500/40 text-cyan-400",
+  picked_up:  "border-blue-500/40 text-blue-400",
+  on_the_way: "border-violet-500/40 text-violet-400",
+  completed:  "border-emerald-500/40 text-emerald-400",
+  cancelled:  "border-red-500/40 text-red-400",
+  rejected:   "border-gray-500/40 text-gray-400",
 };
 
 const STATUS_BTN: Record<string, string> = {
-  all:       "border-border text-muted-foreground hover:bg-secondary",
-  pending:   "border-amber-500/40   text-amber-400   hover:bg-amber-500/10",
-  confirmed: "border-cyan-500/40    text-cyan-400    hover:bg-cyan-500/10",
+  all:        "border-border text-muted-foreground hover:bg-secondary",
+  pending:    "border-amber-500/40   text-amber-400   hover:bg-amber-500/10",
+  confirmed:  "border-cyan-500/40    text-cyan-400    hover:bg-cyan-500/10",
+  picked_up:  "border-blue-500/40    text-blue-400    hover:bg-blue-500/10",
+  on_the_way: "border-violet-500/40  text-violet-400  hover:bg-violet-500/10",
   completed: "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10",
   cancelled: "border-red-500/40     text-red-400     hover:bg-red-500/10",
   rejected:  "border-gray-500/40   text-gray-400    hover:bg-gray-500/10",
@@ -101,10 +115,11 @@ export default function AdminDashboard() {
     const [svc, bk, dRoles] = await Promise.all([
       supabase.from("services").select("*").in("branch_id", branchIds).order("name"),
       supabase.from("bookings").select("*").in("branch_id", branchIds).order("booking_date", { ascending: false }),
-      supabase.from("user_roles").select("user_id").eq("role", "driver"),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any).from("user_roles").select("user_id").eq("role", "driver"),
     ]);
     setServices((svc.data ?? []) as Service[]);
-    const bkData = (bk.data ?? []) as Booking[];
+    const bkData = (bk.data ?? []) as unknown as Booking[];
     setBookings(bkData);
     const uids = [...new Set(bkData.map((b) => b.user_id))];
     if (uids.length > 0) {
@@ -122,7 +137,8 @@ export default function AdminDashboard() {
 
   const driverName = (uid: string) => { const d = drivers.find((d) => d.user_id === uid); return d?.display_name ?? d?.email?.split("@")[0] ?? "Driver"; };
   async function assignDriver(bookingId: string, driverId: string | null) {
-    const { error } = await supabase.from("bookings").update({ driver_id: driverId }).eq("id", bookingId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("bookings").update({ driver_id: driverId }).eq("id", bookingId);
     if (error) return toast.error(error.message);
     toast.success(driverId ? "Driver assigned!" : "Driver removed");
     setDriverSelect((prev) => { const next = { ...prev }; delete next[bookingId]; return next; });
@@ -177,7 +193,8 @@ export default function AdminDashboard() {
   }
 
   async function setStatus(id: string, status: Status) {
-    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("bookings").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     if (user) await supabase.from("audit_logs").insert({ actor_id: user.id, action: `booking.${status}`, entity_type: "booking", entity_id: id });
     void load();
@@ -341,7 +358,7 @@ export default function AdminDashboard() {
                           <div className="font-medium text-sm">{svc?.name ?? "—"} <span className="text-muted-foreground">·</span> <span className="text-xs text-muted-foreground">{nameOf(b.user_id)}</span></div>
                           <div className="text-xs text-muted-foreground">{new Date(b.booking_date).toLocaleString()} · <span className="text-emerald-400 font-medium">₱{Number(b.amount).toFixed(0)}</span> · {branches.find((br) => br.id === b.branch_id)?.name}</div>
                         </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[b.status] ?? ""}`}>{b.status}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[b.status] ?? ""}`}>{STATUS_LABELS[b.status] ?? b.status}</span>
                       </div>
                       {meta && (
                         <div className="grid sm:grid-cols-2 gap-1">
@@ -359,11 +376,11 @@ export default function AdminDashboard() {
                         </div>
                       )}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {(["confirmed", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
+                        {(["confirmed", "picked_up", "on_the_way", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
                           <button key={s} disabled={b.status === s} onClick={() => setStatus(b.id, s)}
-                            className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all capitalize disabled:opacity-30 disabled:cursor-not-allowed ${
-                              b.status === s ? STATUS_BTN_ACTIVE[s] : STATUS_BTN[s]
-                            }`}>{s}</button>
+                            className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                              b.status === s ? (STATUS_BTN_ACTIVE[s] ?? "") : STATUS_BTN[s]
+                            }`}>{STATUS_LABELS[s]}</button>
                         ))}
                       </div>
                       {/* Driver assignment */}
