@@ -1,16 +1,14 @@
-import { useState } from "react";
 import { useInView } from "@/hooks/useInView";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  MapPin, Navigation, Clock, Shield, Bell, Route,
-  Users, ArrowRight, Menu, CheckCircle2, Sparkles
+  Navigation, Clock, Shield, Bell, Route,
+  Users, ArrowRight, Menu, CheckCircle2, Star, Quote,
+  MapPin, Phone, Mail
 } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
 import heroImg from "@/assets/hero-city.jpg";
-import { toast } from "sonner";
 
 const features = [
   { icon: Navigation, title: "Real-Time GPS Tracking", desc: "Watch your ride approach live on the map with continuous location updates." },
@@ -27,25 +25,64 @@ const steps = [
   { n: "03", title: "Ride with ease", desc: "Arrive on time, every time, with full transparency." },
 ];
 
-export default function SmartDropApp() {
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("");
+const testimonials = [
+  {
+    name: "Jade Maria Santos",
+    role: "Daily commuter · Kalibo",
+    initials: "jMS",
+    gradient: "from-violet-500 to-indigo-600",
+    quote: "SmartDrop completely changed how I get to work. I know exactly when my ride arrives — no more standing at the terminal guessing.",
+    highlight: "No more guessing",
+  },
+  {
+    name: "Kim Matthew Dela Cruz",
+    role: "College student · Aklan State University",
+    initials: "KMJD",
+    gradient: "from-emerald-500 to-teal-600",
+    quote: "Booking a ride home after class used to stress me out. Now I just set my pickup on the map and I'm done. Super convenient!",
+    highlight: "Super convenient",
+  },
+  {
+    name: "Anna Reyes",
+    role: "Office worker · Kalibo Capitol",
+    initials: "AR",
+    gradient: "from-rose-500 to-pink-600",
+    quote: "I love seeing the fare estimate before confirming. No surprises, no haggling — exactly what I needed for my daily commute.",
+    highlight: "No surprises",
+  },
+  {
+    name: "Carlo Mendoza",
+    role: "Driver · SmartDrop Partner",
+    initials: "CM",
+    gradient: "from-amber-500 to-orange-500",
+    quote: "As a driver, SmartDrop gives me organized trips. I know my passengers ahead of time and the routes are always clear.",
+    highlight: "Organized trips",
+  },
+  {
+    name: "Liza Mae Villanueva",
+    role: "Nurse · Kalibo Provincial Hospital",
+    initials: "LMV",
+    gradient: "from-sky-500 to-blue-600",
+    quote: "Night shifts used to mean uncertain rides home. SmartDrop lets me pre-book before I even clock out. It's a lifesaver.",
+    highlight: "A lifesaver",
+  },
+  {
+    name: "Renz Bautista",
+    role: "Entrepreneur · Malay",
+    initials: "RB",
+    gradient: "from-fuchsia-500 to-purple-600",
+    quote: "Managing supplier pickups was a headache. SmartDrop streamlined everything — I can track every trip and plan my day properly.",
+    highlight: "Streamlined everything",
+  },
+];
 
+export default function SmartDropApp() {
   const [featHeadRef, featHeadInView] = useInView<HTMLDivElement>();
   const [featGridRef, featGridInView] = useInView<HTMLDivElement>();
   const [howHeadRef, howHeadInView] = useInView<HTMLDivElement>();
   const [stepsRef, stepsInView] = useInView<HTMLDivElement>();
   const [aboutRef, aboutInView] = useInView<HTMLElement>();
-  const [ctaRef, ctaInView] = useInView<HTMLElement>();
-
-  const handleBook = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pickup || !dropoff) {
-      toast.error("Please enter both pick-up and drop-off locations.");
-      return;
-    }
-    toast.success(`Searching rides from ${pickup} to ${dropoff}…`);
-  };
+  const [testRef, testInView] = useInView<HTMLElement>();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -93,34 +130,18 @@ export default function SmartDropApp() {
               pick-ups, plan routes, and travel with structure. We're just getting started.
             </p>
 
-            {/* Booking card */}
-            <Card className="p-4 md:p-6 bg-card/80 backdrop-blur-md border-border shadow-card max-w-xl">
-              <form onSubmit={handleBook} className="space-y-3">
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                  <Input
-                    placeholder="Pick-up location"
-                    value={pickup}
-                    onChange={(e) => setPickup(e.target.value)}
-                    className="pl-10 bg-secondary border-border h-12"
-                  />
-                </div>
-                <div className="relative">
-                  <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent" />
-                  <Input
-                    placeholder="Drop-off location"
-                    value={dropoff}
-                    onChange={(e) => setDropoff(e.target.value)}
-                    className="pl-10 bg-secondary border-border h-12"
-                  />
-                </div>
-                <Button type="submit" size="lg" className="w-full bg-gradient-brand text-primary-foreground hover:opacity-90 shadow-glow h-12">
-                  Find a ride <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </form>
-            </Card>
-
-            <div className="flex items-center gap-6 pt-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button size="lg" className="bg-gradient-brand text-primary-foreground hover:opacity-90 shadow-glow h-12 px-8" onClick={() => (window.location.href = "/signin")}>
+                Get started <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex -space-x-2">
+                {["from-violet-500 to-indigo-600","from-emerald-500 to-teal-600","from-rose-500 to-pink-600","from-amber-500 to-orange-500"].map((g, i) => (
+                  <div key={i} className={`w-7 h-7 rounded-full bg-gradient-to-br ${g} border-2 border-background`} />
+                ))}
+              </div>
+              <span>Trusted by commuters across Kalibo &amp; Aklan</span>
             </div>
           </div>
 
@@ -221,33 +242,54 @@ export default function SmartDropApp() {
         </Card>
       </section>
 
-      {/* CTA */}
-      <section ref={ctaRef} className="container pb-24">
-        <Card className={`relative overflow-hidden p-12 md:p-16 text-center border-border shadow-glow scroll-reveal-zoom${ctaInView ? " is-visible" : ""}`}
-              style={{ background: "var(--gradient-brand)" }}>
-          <div className="absolute inset-0 opacity-20" style={{ background: "var(--gradient-glow)" }} />
-          <div className="relative">
-            <h2 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
-              Be part of a new way to commute.
-            </h2>
-            <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              SmartDrop is a new system being created — designed around the real needs of
-              Filipino commuters and drivers. Try the concept and explore what's possible.
-            </p>
-            <Button size="lg" variant="secondary" className="h-12 px-8" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
-              Explore the concept <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </div>
-        </Card>
+      {/* TESTIMONIALS */}
+      <section id="testimonials" ref={testRef} className="container pb-24">
+        <div className={`text-center max-w-2xl mx-auto mb-12 scroll-reveal${testInView ? " is-visible" : ""}`}>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            Real riders, <span className="text-gradient-brand">real results</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground">See what commuters and drivers across the Philippines are saying about SmartDrop.</p>
+        </div>
+        <div className={`grid md:grid-cols-2 lg:grid-cols-3 gap-5 scroll-reveal${testInView ? " is-visible" : ""}`}>
+          {testimonials.map((t, i) => (
+            <Card key={t.name} className={`p-6 bg-card border-border shadow-card flex flex-col gap-4 hover:border-primary/30 transition-smooth scroll-delay-${(i % 3 + 1) * 100}`}>
+              {/* Stars */}
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, s) => (
+                  <Star key={s} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              {/* Quote */}
+              <div className="relative flex-1">
+                <Quote className="w-6 h-6 text-violet-400/30 mb-1" />
+                <p className="text-sm text-foreground/90 leading-relaxed">{t.quote}</p>
+              </div>
+              {/* Highlight badge */}
+              <div>
+                <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 to-indigo-500/20 text-violet-300 border border-violet-500/20">
+                  ✦ {t.highlight}
+                </span>
+              </div>
+              {/* Person */}
+              <div className="flex items-center gap-3 pt-1 border-t border-border">
+                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm`}>
+                  {t.initials}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">{t.name}</div>
+                  <div className="text-xs text-muted-foreground">{t.role}</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </section>
 
       {/* FOOTER */}
       <footer className="border-t border-border">
-        <div className="container py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="SmartDrop" width={24} height={24} className="rounded" />
-            <span>© 2026 SmartDrop. Ride with ease.</span>
-          </div>
+        <div className="container py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} SmartDrop. All rights reserved.</span>
+          <span>Powered by SmartDrop — Ride with ease, arrive with confidence.</span>
         </div>
       </footer>
     </div>

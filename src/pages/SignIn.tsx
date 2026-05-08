@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import logo from "@/assets/smartdrop-logo.png";
 
 const GoogleIcon = () => (
@@ -96,6 +96,11 @@ const SignIn = () => {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r" style={{ background: "var(--gradient-brand)" }} />
 
         <div className="p-5">
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
+            <ArrowLeft className="w-3 h-3" />
+            Back to Home
+          </Link>
+
           <Link to="/" className="flex items-center gap-2 justify-center mb-4">
             <img src={logo} alt="SmartDrop" width={28} height={28} className="rounded-md" />
             <span className="font-bold text-base tracking-tight">SmartDrop</span>

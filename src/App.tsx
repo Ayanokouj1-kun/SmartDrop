@@ -9,6 +9,7 @@ import SignIn from "./pages/SignIn.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import SuperadminDashboard from "./pages/SuperadminDashboard.tsx";
+import DriverDashboard from "./pages/DriverDashboard.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
           <Route path="/superadmin" element={<ProtectedRoute requireRole="superadmin"><SuperadminDashboard /></ProtectedRoute>} />
+          <Route path="/driver" element={<ProtectedRoute requireRole="driver"><DriverDashboard /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

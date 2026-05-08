@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso } from "lucide-react";
+import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso, User } from "lucide-react";
 
 type TimeVal = { h: string; m: string; p: "AM" | "PM" };
 const to24h = (t: TimeVal) => { let h = parseInt(t.h); if (t.p === "PM" && h !== 12) h += 12; if (t.p === "AM" && h === 12) h = 0; return `${String(h).padStart(2, "0")}:${t.m}`; };
@@ -39,7 +39,8 @@ function TimePicker({ value, onChange, label }: { value: TimeVal; onChange: (v: 
 
 interface Branch { id: string; name: string; location: string | null; }
 interface Service { id: string; branch_id: string; name: string; description: string | null; price: number; is_active: boolean; available_from: string | null; available_to: string | null; }
-interface Booking { id: string; booking_date: string; status: string; amount: number; service_id: string; branch_id: string; user_id: string; }
+interface Booking { id: string; booking_date: string; status: string; amount: number; service_id: string; branch_id: string; user_id: string; notes: string | null; driver_id: string | null; }
+interface Driver  { user_id: string; display_name: string | null; email: string | null; }
 interface Profile { user_id: string; display_name: string | null; email: string | null; username: string | null; }
 
 const STATUSES = ["pending", "confirmed", "completed", "cancelled", "rejected"] as const;
@@ -85,6 +86,8 @@ export default function AdminDashboard() {
   const [editFrom, setEditFrom] = useState<TimeVal>({ h: "8", m: "00", p: "AM" });
   const [editTo, setEditTo] = useState<TimeVal>({ h: "5", m: "00", p: "PM" });
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driverSelect, setDriverSelect] = useState<Record<string, string>>({});
 
   useEffect(() => { void load(); }, [user]);
 
@@ -95,9 +98,10 @@ export default function AdminDashboard() {
     setBranches(branchList);
     const branchIds = branchList.map((b) => b.id);
     if (branchIds.length === 0) { setServices([]); setBookings([]); return; }
-    const [svc, bk] = await Promise.all([
+    const [svc, bk, dRoles] = await Promise.all([
       supabase.from("services").select("*").in("branch_id", branchIds).order("name"),
       supabase.from("bookings").select("*").in("branch_id", branchIds).order("booking_date", { ascending: false }),
+      supabase.from("user_roles").select("user_id").eq("role", "driver"),
     ]);
     setServices((svc.data ?? []) as Service[]);
     const bkData = (bk.data ?? []) as Booking[];
@@ -107,12 +111,29 @@ export default function AdminDashboard() {
       const { data: prof } = await supabase.from("profiles").select("user_id,display_name,email,username").in("user_id", uids);
       setProfiles((prof ?? []) as Profile[]);
     }
+    const dIds = ((dRoles.data ?? []) as { user_id: string }[]).map((r) => r.user_id);
+    if (dIds.length > 0) {
+      const { data: dProfs } = await supabase.from("profiles").select("user_id, display_name, email").in("user_id", dIds);
+      setDrivers((dProfs ?? []) as Driver[]);
+    } else {
+      setDrivers([]);
+    }
+  }
+
+  const driverName = (uid: string) => { const d = drivers.find((d) => d.user_id === uid); return d?.display_name ?? d?.email?.split("@")[0] ?? "Driver"; };
+  async function assignDriver(bookingId: string, driverId: string | null) {
+    const { error } = await supabase.from("bookings").update({ driver_id: driverId }).eq("id", bookingId);
+    if (error) return toast.error(error.message);
+    toast.success(driverId ? "Driver assigned!" : "Driver removed");
+    setDriverSelect((prev) => { const next = { ...prev }; delete next[bookingId]; return next; });
+    void load();
   }
 
   const nameOf = (uid: string) => {
     const p = profiles.find((p) => p.user_id === uid);
     return p?.username ?? p?.display_name ?? p?.email ?? uid.slice(0, 8);
   };
+  const parseNotes = (notes: string | null) => { try { return notes ? JSON.parse(notes) : null; } catch { return null; } };
 
   async function addService(e: React.FormEvent) {
     e.preventDefault();
@@ -215,7 +236,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Tag className="w-3 h-3" />Service Name</label>
-                    <Input placeholder="e.g. Express Delivery, Parcel Drop-off…" value={newSvc.name} onChange={(e) => setNewSvc({ ...newSvc, name: e.target.value })} className="h-9" />
+                    <Input placeholder="e.g. Regular Ride, Parcel Drop-off, Night Ride..." value={newSvc.name} onChange={(e) => setNewSvc({ ...newSvc, name: e.target.value })} className="h-9" />
                   </div>
                 </div>
 
@@ -238,7 +259,7 @@ export default function AdminDashboard() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><AlignLeft className="w-3 h-3" />Description <span className="text-muted-foreground font-normal">(optional)</span></label>
-                  <Textarea placeholder="e.g. Same-day parcel delivery within the city. Max 5kg." value={newSvc.description} onChange={(e) => setNewSvc({ ...newSvc, description: e.target.value })} rows={3} />
+                  <Textarea placeholder="" value={newSvc.description} onChange={(e) => setNewSvc({ ...newSvc, description: e.target.value })} rows={3} />
                 </div>
 
                 <Button type="submit" className="w-full">Add Service</Button>
@@ -312,20 +333,63 @@ export default function AdminDashboard() {
                 {filteredBookings.length === 0 && <p className="text-sm text-muted-foreground">No bookings found.</p>}
                 {filteredBookings.map((b) => {
                   const svc = services.find((s) => s.id === b.service_id);
+                  const meta = parseNotes(b.notes);
                   return (
-                    <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-secondary border border-border">
-                      <div>
-                        <div className="font-medium text-sm">{svc?.name ?? "—"} <span className="text-muted-foreground">·</span> <span className="text-xs text-muted-foreground">{nameOf(b.user_id)}</span></div>
-                        <div className="text-xs text-muted-foreground">{new Date(b.booking_date).toLocaleString()} · ₱{Number(b.amount).toFixed(2)} · {branches.find((br) => br.id === b.branch_id)?.name}</div>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                    <div key={b.id} className="p-3 rounded-lg bg-secondary border border-border space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="font-medium text-sm">{svc?.name ?? "—"} <span className="text-muted-foreground">·</span> <span className="text-xs text-muted-foreground">{nameOf(b.user_id)}</span></div>
+                          <div className="text-xs text-muted-foreground">{new Date(b.booking_date).toLocaleString()} · <span className="text-emerald-400 font-medium">₱{Number(b.amount).toFixed(0)}</span> · {branches.find((br) => br.id === b.branch_id)?.name}</div>
+                        </div>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[b.status] ?? ""}`}>{b.status}</span>
+                      </div>
+                      {meta && (
+                        <div className="grid sm:grid-cols-2 gap-1">
+                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <span className="w-3 h-3 mt-0.5 shrink-0 text-emerald-400">●</span>
+                            <span className="truncate">{meta.pickup?.address ?? "—"}</span>
+                          </div>
+                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <span className="w-3 h-3 mt-0.5 shrink-0 text-red-400">●</span>
+                            <span className="truncate">{meta.dropoff?.address ?? "—"}</span>
+                          </div>
+                          {meta.distanceKm > 0 && (
+                            <span className="text-xs text-muted-foreground sm:col-span-2">{meta.distanceKm?.toFixed(1)} km · {Math.round(meta.durationMin ?? 0)} min est.</span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {(["confirmed", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
                           <button key={s} disabled={b.status === s} onClick={() => setStatus(b.id, s)}
                             className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all capitalize disabled:opacity-30 disabled:cursor-not-allowed ${
                               b.status === s ? STATUS_BTN_ACTIVE[s] : STATUS_BTN[s]
                             }`}>{s}</button>
                         ))}
+                      </div>
+                      {/* Driver assignment */}
+                      <div className="flex items-center gap-2 pt-1.5 border-t border-border">
+                        {b.driver_id ? (
+                          <div className="flex items-center gap-1.5 text-xs flex-1">
+                            <User className="w-3 h-3 text-violet-400 shrink-0" />
+                            <span className="text-muted-foreground">Driver:</span>
+                            <span className="font-medium text-violet-300">{driverName(b.driver_id)}</span>
+                            <button onClick={() => void assignDriver(b.id, null)} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                          </div>
+                        ) : drivers.length > 0 ? (
+                          <>
+                            <select value={driverSelect[b.id] ?? ""} onChange={(e) => setDriverSelect((p) => ({ ...p, [b.id]: e.target.value }))}
+                              className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs">
+                              <option value="">Assign driver…</option>
+                              {drivers.map((d) => <option key={d.user_id} value={d.user_id}>{driverName(d.user_id)}</option>)}
+                            </select>
+                            <button disabled={!driverSelect[b.id]} onClick={() => { const id = driverSelect[b.id]; if (id) void assignDriver(b.id, id); }}
+                              className="h-7 px-2.5 text-xs rounded-md border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
+                              Assign
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic flex items-center gap-1"><User className="w-3 h-3" />No drivers available</span>
+                        )}
                       </div>
                     </div>
                   );
