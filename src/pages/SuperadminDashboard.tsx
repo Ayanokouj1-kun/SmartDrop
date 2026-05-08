@@ -14,7 +14,7 @@ import {
   Trash2, TrendingUp, TrendingDown, Users, Building2,
   Brain, Lock, Shield, DollarSign, Calendar,
   CheckCircle2, AlertTriangle, Info, BarChart3,
-  MapPin, Navigation2, Route, Search, X, Car, User,
+  MapPin, Navigation2, Route, Search, X, Car, User, Settings,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -53,13 +53,15 @@ export default function SuperadminDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [newBranch, setNewBranch] = useState({ name: "", location: "", description: "" });
   const [assignForm, setAssignForm] = useState({ admin_id: "", branch_id: "" });
+  const [platformSettings, setPlatformSettings] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Users & Roles filters
   const [userSearch,     setUserSearch]     = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | AppRole>("all");
   const [userStatus,     setUserStatus]     = useState<"all" | "active" | "deactivated">("all");
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); void loadSettings(); }, []);
 
   const parseNotes = (notes: string | null) => { try { return notes ? JSON.parse(notes) : null; } catch { return null; } };
   const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "—";
@@ -165,8 +167,29 @@ export default function SuperadminDashboard() {
     void load();
   }
 
-  async function overrideBooking(id: string, status: "pending" | "confirmed" | "completed" | "cancelled" | "rejected") {
-    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+  async function loadSettings() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).from("platform_settings").select("key, value");
+    if (data) {
+      const map: Record<string, string> = {};
+      (data as { key: string; value: string }[]).forEach((r) => { map[r.key] = r.value; });
+      setPlatformSettings(map);
+    }
+  }
+
+  async function saveSetting(key: string, value: string) {
+    setSavingSettings(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("platform_settings").upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setSavingSettings(false);
+    if (error) return toast.error(error.message);
+    setPlatformSettings((prev) => ({ ...prev, [key]: value }));
+    toast.success("Setting saved");
+  }
+
+  async function overrideBooking(id: string, status: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("bookings").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     if (user) await supabase.from("audit_logs").insert({ actor_id: user.id, action: `booking.override.${status}`, entity_type: "booking", entity_id: id });
     void load();
@@ -261,6 +284,7 @@ export default function SuperadminDashboard() {
           <TabsTrigger value="branches" className="gap-1.5"><Building2 className="w-3.5 h-3.5" />Branches</TabsTrigger>
           <TabsTrigger value="bookings" className="gap-1.5"><Calendar className="w-3.5 h-3.5" />Bookings</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" />Audit Logs</TabsTrigger>
+          <TabsTrigger value="settings" className="gap-1.5"><Settings className="w-3.5 h-3.5" />Settings</TabsTrigger>
         </TabsList>
 
         {/* ── AI Analytics ── */}
@@ -536,11 +560,16 @@ export default function SuperadminDashboard() {
                         <div className="text-xs text-muted-foreground">{branchName(b.branch_id)} · {new Date(b.booking_date).toLocaleString()} · <span className="text-emerald-400 font-medium">₱{Number(b.amount).toFixed(0)}</span></div>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
-                        b.status === "pending" ? "border-amber-500/40 text-amber-400" :
-                        b.status === "confirmed" ? "border-cyan-500/40 text-cyan-400" :
-                        b.status === "completed" ? "border-emerald-500/40 text-emerald-400" :
-                        b.status === "cancelled" ? "border-red-500/40 text-red-400" : "border-gray-500/40 text-gray-400"
-                      }`}>{b.status}</span>
+                        b.status === "pending"    ? "border-amber-500/40 text-amber-400" :
+                        b.status === "confirmed"  ? "border-cyan-500/40 text-cyan-400" :
+                        b.status === "picked_up"  ? "border-blue-500/40 text-blue-400" :
+                        b.status === "on_the_way" ? "border-violet-500/40 text-violet-400" :
+                        b.status === "completed"  ? "border-emerald-500/40 text-emerald-400" :
+                        b.status === "cancelled"  ? "border-red-500/40 text-red-400" : "border-gray-500/40 text-gray-400"
+                      }`}>{{
+                        pending: "Pending", confirmed: "Accepted", picked_up: "Picked Up",
+                        on_the_way: "On The Way", completed: "Completed", cancelled: "Cancelled", rejected: "Declined",
+                      }[b.status] ?? b.status}</span>
                     </div>
                     {meta && (
                       <div className="grid sm:grid-cols-2 gap-1">
@@ -567,25 +596,21 @@ export default function SuperadminDashboard() {
                       </div>
                     )}
                     <div className="flex items-center gap-1 flex-wrap">
-                      {(["confirmed", "completed", "cancelled", "rejected"] as const).map((s) => (
-                        <button key={s} disabled={b.status === s} onClick={() => overrideBooking(b.id, s)}
-                          className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all capitalize disabled:opacity-30 disabled:cursor-not-allowed ${
-                            b.status === s
-                              ? s === "confirmed" ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50"
-                              : s === "completed" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
-                              : s === "cancelled" ? "bg-red-500/20 text-red-300 border-red-500/50"
-                              : "bg-gray-500/20 text-gray-300 border-gray-500/50"
-                              : s === "confirmed" ? "border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
-                              : s === "completed" ? "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
-                              : s === "cancelled" ? "border-red-500/40 text-red-400 hover:bg-red-500/10"
-                              : "border-gray-500/40 text-gray-400 hover:bg-gray-500/10"
-                          }`}>{s}</button>
+                      {([
+                        { key: "confirmed",  label: "Accepted",   active: "bg-cyan-500/20 text-cyan-300 border-cyan-500/50",        idle: "border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10" },
+                        { key: "picked_up",  label: "Picked Up",  active: "bg-blue-500/20 text-blue-300 border-blue-500/50",        idle: "border-blue-500/40 text-blue-400 hover:bg-blue-500/10" },
+                        { key: "on_the_way", label: "On The Way", active: "bg-violet-500/20 text-violet-300 border-violet-500/50",  idle: "border-violet-500/40 text-violet-400 hover:bg-violet-500/10" },
+                        { key: "completed",  label: "Completed",  active: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50", idle: "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" },
+                        { key: "cancelled",  label: "Cancel",     active: "bg-red-500/20 text-red-300 border-red-500/50",           idle: "border-red-500/40 text-red-400 hover:bg-red-500/10" },
+                        { key: "rejected",   label: "Reject",     active: "bg-gray-500/20 text-gray-300 border-gray-500/50",        idle: "border-gray-500/40 text-gray-400 hover:bg-gray-500/10" },
+                      ] as const).map(({ key, label, active, idle }) => (
+                        <button key={key} disabled={b.status === key} onClick={() => overrideBooking(b.id, key)}
+                          className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${b.status === key ? active : idle}`}>{label}</button>
                       ))}
                     </div>
                   </div>
                 );
               })}
-              {bookings.length === 0 && <p className="text-sm text-muted-foreground">No bookings yet.</p>}
             </div>
           </Card>
         </TabsContent>
@@ -602,6 +627,56 @@ export default function SuperadminDashboard() {
                 </div>
               ))}
               {logs.length === 0 && <p className="text-sm text-muted-foreground">No activity yet.</p>}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ── Platform Settings ── */}
+        <TabsContent value="settings">
+          <Card className="p-6 bg-card border-border shadow-card">
+            <h2 className="font-semibold text-lg mb-1">Platform Settings</h2>
+            <p className="text-sm text-muted-foreground mb-5">Global configuration for the SmartDrop platform.</p>
+            <div className="grid sm:grid-cols-2 gap-5">
+              {[
+                { key: "platform_name",    label: "Platform Name",       type: "text" },
+                { key: "base_fare",         label: "Base Fare (₱)",        type: "number" },
+                { key: "per_km_rate",       label: "Per Km Rate (₱)",      type: "number" },
+                { key: "commission_rate",   label: "Commission Rate (%)",  type: "number" },
+              ].map(({ key, label, type }) => {
+                const val = platformSettings[key] ?? "";
+                return (
+                  <div key={key} className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                    <div className="flex gap-2">
+                      <Input type={type} defaultValue={val} id={`setting-${key}`}
+                        className="h-9 flex-1 bg-secondary border-border text-sm" />
+                      <Button size="sm" disabled={savingSettings}
+                        onClick={() => { const el = document.getElementById(`setting-${key}`) as HTMLInputElement; void saveSetting(key, el?.value ?? val); }}
+                        className="h-9 px-3 text-xs">
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="sm:col-span-2 space-y-1.5 pt-2 border-t border-border">
+                <label className="text-xs font-medium text-muted-foreground">Maintenance Mode</label>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary border border-border">
+                  <div>
+                    <div className="text-sm font-medium">Take system offline</div>
+                    <div className="text-xs text-muted-foreground">Prevents new bookings from being created.</div>
+                  </div>
+                  <button
+                    onClick={() => void saveSetting("maintenance_mode", platformSettings["maintenance_mode"] === "true" ? "false" : "true")}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      platformSettings["maintenance_mode"] === "true" ? "bg-red-500" : "bg-secondary border border-border"
+                    }`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      platformSettings["maintenance_mode"] === "true" ? "translate-x-6" : "translate-x-1"
+                    }`} />
+                  </button>
+                </div>
+              </div>
             </div>
           </Card>
         </TabsContent>
