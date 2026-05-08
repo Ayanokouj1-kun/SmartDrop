@@ -480,7 +480,7 @@ export default function AdminDashboard() {
                         <div className="px-4 pb-3">
                           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Override status</p>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {(["confirmed", "picked_up", "on_the_way", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
+                            {(["confirmed", "cancelled", "rejected"] as Status[]).map((s) => (
                               <button key={s} disabled={b.status === s} onClick={() => setStatus(b.id, s)}
                                 className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
                                   b.status === s ? (STATUS_BTN_ACTIVE[s] ?? "") : STATUS_BTN[s]
