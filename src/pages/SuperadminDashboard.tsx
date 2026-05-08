@@ -272,7 +272,7 @@ export default function SuperadminDashboard() {
     <AppShell title="Superadmin Console" nav={[]}>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {[
           { icon: <Calendar className="w-5 h-5 text-violet-400" />, label: "Total Bookings", value: bookings.length, trend: bkTrend },
           { icon: <DollarSign className="w-5 h-5 text-emerald-400" />, label: "Revenue (completed)", value: `₱${totalRevenue.toFixed(2)}`, trend: revTrend },
@@ -280,7 +280,7 @@ export default function SuperadminDashboard() {
           { icon: <Car className="w-5 h-5 text-violet-400" />, label: "Drivers", value: driverCount, trend: null },
           { icon: <Building2 className="w-5 h-5 text-amber-400" />, label: "Branches", value: branches.length, trend: null },
         ].map((s) => (
-          <Card key={s.label} className="p-5 bg-card border-border shadow-card">
+          <Card key={s.label} className="p-4 md:p-5 bg-card border-border shadow-card">
             <div className="flex items-center justify-between mb-2">{s.icon}<TrendBadge pct={s.trend} /></div>
             <div className="text-2xl font-bold">{s.value}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
@@ -301,7 +301,7 @@ export default function SuperadminDashboard() {
 
         {/* ── AI Analytics ── */}
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {aiInsights.map((ins, i) => (
               <div key={i} className={`flex items-start gap-3 p-4 rounded-xl border ${insightColors[ins.type]}`}>
                 <span className="mt-0.5 shrink-0">{ins.icon}</span>
@@ -310,15 +310,15 @@ export default function SuperadminDashboard() {
             ))}
           </div>
 
-          <Card className="p-6 bg-card border-border shadow-card">
-            <div className="flex items-center justify-between mb-4">
+          <Card className="p-4 sm:p-6 bg-card border-border shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-violet-400" />Booking & Revenue Trend</h3>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-violet-400 inline-block" />Bookings</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />Revenue (₱)</span>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />Bookings</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />Revenue (₱)</span>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={bookingTrend} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="gbk" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient>
@@ -394,7 +394,7 @@ export default function SuperadminDashboard() {
 
         {/* ── Users & Roles ── */}
         <TabsContent value="users">
-          <Card className="p-6 bg-card border-border shadow-card">
+          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[1fr_340px] lg:gap-4 xl:gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="font-semibold text-lg">
                 Users & Roles
@@ -449,7 +449,7 @@ export default function SuperadminDashboard() {
               </div>
             </div>
 
-            <div className="space-y-2 max-h-[520px] overflow-y-auto">
+            <div className="space-y-2 max-h-[55vh] md:max-h-[520px] overflow-y-auto">
               {filteredProfiles.map((p) => {
                 const r = rolesOf(p.user_id);
                 const isDriverRow = r.includes("driver");
@@ -493,7 +493,7 @@ export default function SuperadminDashboard() {
                 </p>
               )}
             </div>
-          </Card>
+          </div>
         </TabsContent>
 
         {/* ── Branches ── */}
@@ -559,9 +559,9 @@ export default function SuperadminDashboard() {
 
         {/* ── Bookings ── */}
         <TabsContent value="bookings">
-          <Card className="p-6 bg-card border-border shadow-card">
+          <Card className="p-4 sm:p-6 bg-card border-border shadow-card">
             <h2 className="font-semibold text-lg mb-4">All Bookings <span className="text-sm font-normal text-muted-foreground">({bookings.length})</span></h2>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            <div className="space-y-2 max-h-[55vh] md:max-h-[600px] overflow-y-auto">
               {bookings.map((b) => {
                 const meta = parseNotes(b.notes);
                 const rating = ratings[b.id];

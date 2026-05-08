@@ -178,10 +178,10 @@ export default function UserDashboard() {
 
   return (
     <AppShell title="Book a Ride" nav={[]}>
-      <div className="grid xl:grid-cols-[1fr_400px] gap-6 items-start">
+      <div className="grid lg:grid-cols-[1fr_380px] gap-4 md:gap-6 items-start">
 
         {/* ── Map + booking form ── */}
-        <Card className="p-6 bg-card border-border shadow-card space-y-5">
+        <Card className="p-4 sm:p-6 bg-card border-border shadow-card space-y-4 sm:space-y-5">
           <div>
             <h2 className="font-semibold text-lg">Where to?</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Pin your pickup and dropoff on the map, or search an address.</p>
@@ -336,7 +336,7 @@ export default function UserDashboard() {
           {/* Booking history */}
           <Card className="p-6 bg-card border-border shadow-card">
             <h2 className="font-semibold text-lg mb-4">My Bookings <span className="text-sm font-normal text-muted-foreground">({bookings.length})</span></h2>
-            <div className="space-y-3 max-h-[680px] overflow-y-auto">
+            <div className="space-y-3 max-h-[55vh] lg:max-h-[680px] overflow-y-auto">
             {bookings.length === 0 && <p className="text-sm text-muted-foreground">No bookings yet.</p>}
             {bookings.map((b) => {
               const meta = parseNotes(b.notes);

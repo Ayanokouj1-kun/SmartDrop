@@ -71,9 +71,9 @@ export default function AppShell({ title, nav, children }: { title: string; nav:
     :                          "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/70 border-b border-border">
-        <nav className="container flex items-center justify-between h-16">
+        <nav className="container flex items-center justify-between h-14 md:h-16">
 
           <div className="flex items-center gap-2">
             <img src={logo} alt="SmartDrop" width={32} height={32} className="rounded-lg" />
@@ -115,8 +115,8 @@ export default function AppShell({ title, nav, children }: { title: string; nav:
         </nav>
       </header>
 
-      <main className="container py-8 space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+      <main className="container py-4 sm:py-6 md:py-8 space-y-4 md:space-y-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
         {children}
       </main>
 

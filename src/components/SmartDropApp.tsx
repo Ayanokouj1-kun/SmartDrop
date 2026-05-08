@@ -119,13 +119,13 @@ export default function SmartDropApp() {
         />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
 
-        <div className="container relative py-24 md:py-32 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
+        <div className="container relative py-14 sm:py-20 md:py-24 lg:py-32 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          <div className="space-y-5 lg:space-y-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
               Organized commuting,{" "}
               <span className="text-gradient-brand">made simple.</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-xl">
               SmartDrop is a concept being built for Filipino commuters — a simpler way to book
               pick-ups, plan routes, and travel with structure. We're just getting started.
             </p>
@@ -167,9 +167,9 @@ export default function SmartDropApp() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="container py-24">
-        <div ref={featHeadRef} className={`max-w-2xl mb-12 scroll-reveal${featHeadInView ? " is-visible" : ""}`}>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+      <section id="features" className="container py-14 sm:py-20 md:py-24">
+        <div ref={featHeadRef} className={`max-w-2xl mb-8 md:mb-12 scroll-reveal${featHeadInView ? " is-visible" : ""}`}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Everything you need for a <span className="text-gradient-brand">smoother commute</span>
           </h2>
         </div>
@@ -188,9 +188,9 @@ export default function SmartDropApp() {
 
       {/* HOW IT WORKS */}
       <section id="how" className="border-y border-border bg-card/30">
-        <div className="container py-24">
-          <div ref={howHeadRef} className={`text-center max-w-2xl mx-auto mb-12 scroll-reveal${howHeadInView ? " is-visible" : ""}`}>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Three steps to ride</h2>
+        <div className="container py-14 sm:py-20 md:py-24">
+          <div ref={howHeadRef} className={`text-center max-w-2xl mx-auto mb-8 md:mb-12 scroll-reveal${howHeadInView ? " is-visible" : ""}`}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">Three steps to ride</h2>
           </div>
           <div ref={stepsRef} className="grid md:grid-cols-3 gap-6">
             {steps.map((s, i) => (
@@ -205,9 +205,9 @@ export default function SmartDropApp() {
       </section>
 
       {/* ABOUT */}
-      <section id="about" ref={aboutRef} className="container py-24 grid lg:grid-cols-2 gap-12 items-center">
+      <section id="about" ref={aboutRef} className="container py-14 sm:py-20 md:py-24 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         <div className={`scroll-reveal${aboutInView ? " is-visible" : ""}`}>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 md:mb-6">
             Built to solve <span className="text-gradient-brand">real commuter problems</span>
           </h2>
           <p className="text-muted-foreground mb-4">
@@ -243,9 +243,9 @@ export default function SmartDropApp() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section id="testimonials" ref={testRef} className="container pb-24">
-        <div className={`text-center max-w-2xl mx-auto mb-12 scroll-reveal${testInView ? " is-visible" : ""}`}>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+      <section id="testimonials" ref={testRef} className="container pb-14 sm:pb-20 md:pb-24">
+        <div className={`text-center max-w-2xl mx-auto mb-8 md:mb-12 scroll-reveal${testInView ? " is-visible" : ""}`}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Real riders, <span className="text-gradient-brand">real results</span>
           </h2>
           <p className="mt-4 text-muted-foreground">See what commuters and drivers across the Philippines are saying about SmartDrop.</p>

@@ -225,14 +225,14 @@ export default function AdminDashboard() {
   return (
     <AppShell title="Admin Dashboard" nav={[]}>
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
           { icon: <Building2 className="w-5 h-5 text-amber-400" />, label: "Assigned Branches", value: branches.length },
           { icon: <Package className="w-5 h-5 text-violet-400" />, label: "Services", value: services.length },
           { icon: <Calendar className="w-5 h-5 text-cyan-400" />, label: "Pending Bookings", value: bookings.filter((b) => b.status === "pending").length },
           { icon: <DollarSign className="w-5 h-5 text-emerald-400" />, label: "Revenue (completed)", value: `₱${totalRevenue.toFixed(2)}` },
         ].map((s) => (
-          <Card key={s.label} className="p-5 bg-card border-border shadow-card">
+          <Card key={s.label} className="p-4 md:p-5 bg-card border-border shadow-card">
             <div className="mb-2">{s.icon}</div>
             <div className="text-2xl font-bold">{s.value}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
 
           {/* ── Bookings ── */}
           <TabsContent value="bookings">
-            <Card className="p-6 bg-card border-border shadow-card">
+            <Card className="p-4 sm:p-6 bg-card border-border shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 className="font-semibold text-lg">Bookings <span className="text-sm font-normal text-muted-foreground">({filteredBookings.length})</span></h2>
                 <div className="flex flex-wrap gap-1">
@@ -366,7 +366,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[55vh] md:max-h-[600px] overflow-y-auto pr-1">
                 {filteredBookings.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No bookings found.</p>}
                 {filteredBookings.map((b) => {
                   const svc = services.find((s) => s.id === b.service_id);
