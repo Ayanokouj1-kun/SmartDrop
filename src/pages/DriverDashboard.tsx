@@ -189,15 +189,15 @@ export default function DriverDashboard() {
         )}
 
         {/* Service + time */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" />{serviceName(b.service_id)}</span>
-          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+        <div className="flex flex-wrap items-center justify-between gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1 min-w-0"><Zap className="w-3 h-3 text-amber-400 shrink-0" /><span className="truncate">{serviceName(b.service_id)}</span></span>
+          <span className="flex items-center gap-1 shrink-0"><Calendar className="w-3 h-3" />{new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
         </div>
 
         {/* Amount + branch */}
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1 font-bold text-emerald-400 text-sm"><DollarSign className="w-3.5 h-3.5" />₱{Number(b.amount).toFixed(0)}</span>
-          <span className="text-xs text-muted-foreground">{branchName(b.branch_id)}</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1 font-bold text-emerald-400 text-sm shrink-0"><DollarSign className="w-3.5 h-3.5" />₱{Number(b.amount).toFixed(0)}</span>
+          <span className="text-xs text-muted-foreground truncate text-right">{branchName(b.branch_id)}</span>
         </div>
 
         {/* Status-driven action buttons */}
@@ -296,8 +296,8 @@ export default function DriverDashboard() {
 
       {/* Ride tabs */}
       <Tabs defaultValue="queue">
-        <TabsList className="mb-4 w-full sm:w-auto">
-          <TabsTrigger value="queue" className="gap-1.5">
+        <TabsList className="mb-4 w-full">
+          <TabsTrigger value="queue" className="flex-1 gap-1.5">
             Queue
             {pending.length > 0 && (
               <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-medium">
@@ -305,7 +305,7 @@ export default function DriverDashboard() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="active" className="gap-1.5">
+          <TabsTrigger value="active" className="flex-1 gap-1.5">
             Active
             {inProgress.length > 0 && (
               <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded-full font-medium">
@@ -313,7 +313,7 @@ export default function DriverDashboard() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
         </TabsList>
 
         {/* Queue */}
@@ -358,8 +358,10 @@ export default function DriverDashboard() {
               <span className="text-sm">No history yet.</span>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {historyBookings.map((b) => <BookingCard key={b.id} b={b} />)}
+            <div className="max-h-[65vh] overflow-y-auto pr-0.5">
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {historyBookings.map((b) => <BookingCard key={b.id} b={b} />)}
+              </div>
             </div>
           )}
         </TabsContent>
