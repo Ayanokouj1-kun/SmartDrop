@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
-const PH_CENTER: [number, number] = [121.0503, 14.5515];
+const PH_CENTER: [number, number] = [122.3643, 11.7054]; // Kalibo, Aklan
 const BASE_FARE = 40;
 const PER_KM = 15;
 
