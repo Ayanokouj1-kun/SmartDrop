@@ -14,7 +14,7 @@ import {
   Trash2, TrendingUp, TrendingDown, Users, Building2,
   Brain, Lock, Shield, DollarSign, Calendar,
   CheckCircle2, AlertTriangle, Info, BarChart3,
-  MapPin, Navigation2, Route, Search, X, Car, User, Settings,
+  MapPin, Navigation2, Route, Search, X, Car, User, Settings, Star,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -55,6 +55,7 @@ export default function SuperadminDashboard() {
   const [assignForm, setAssignForm] = useState({ admin_id: "", branch_id: "" });
   const [platformSettings, setPlatformSettings] = useState<Record<string, string>>({});
   const [savingSettings, setSavingSettings] = useState(false);
+  const [ratings, setRatings] = useState<Record<string, { rating: number; comment: string | null }>>({});
 
   // Users & Roles filters
   const [userSearch,     setUserSearch]     = useState("");
@@ -79,10 +80,21 @@ export default function SuperadminDashboard() {
     setProfiles((p.data ?? []) as Profile[]);
     setRoles((r.data ?? []) as RoleRow[]);
     setBranches((b.data ?? []) as Branch[]);
-    setBookings((bk.data ?? []) as Booking[]);
+    const bkData = (bk.data ?? []) as Booking[];
+    setBookings(bkData);
     setLogs((l.data ?? []) as Audit[]);
     setAssignments((a.data ?? []) as Assignment[]);
     setServices((sv.data ?? []) as Service[]);
+    const completedIds = bkData.filter((bk) => bk.status === "completed").map((bk) => bk.id);
+    if (completedIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rData } = await (supabase as any).from("ratings").select("booking_id, rating, comment").in("booking_id", completedIds);
+      if (rData) {
+        const map: Record<string, { rating: number; comment: string | null }> = {};
+        (rData as { booking_id: string; rating: number; comment: string | null }[]).forEach((r) => { map[r.booking_id] = { rating: r.rating, comment: r.comment }; });
+        setRatings(map);
+      }
+    }
   }
 
   const rolesOf = (uid: string): AppRole[] => roles.filter((r) => r.user_id === uid).map((r) => r.role);
@@ -552,12 +564,18 @@ export default function SuperadminDashboard() {
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {bookings.map((b) => {
                 const meta = parseNotes(b.notes);
+                const rating = ratings[b.id];
+                const distKm = meta?.distanceKm ?? 0;
                 return (
-                  <div key={b.id} className="p-3 rounded-lg bg-secondary border border-border space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div key={b.id} className="rounded-xl bg-secondary border border-border overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4 pb-3">
                       <div>
-                        <div className="font-medium text-sm">{serviceName(b.service_id)} <span className="text-muted-foreground font-normal">·</span> <span className="text-muted-foreground">{nameOf(b.user_id)}</span></div>
-                        <div className="text-xs text-muted-foreground">{branchName(b.branch_id)} · {new Date(b.booking_date).toLocaleString()} · <span className="text-emerald-400 font-medium">₱{Number(b.amount).toFixed(0)}</span></div>
+                        <div className="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                          <span>{serviceName(b.service_id)}</span>
+                          <span className="text-muted-foreground font-normal text-xs">·</span>
+                          <span className="font-normal text-sm text-muted-foreground">{nameOf(b.user_id)}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{branchName(b.branch_id)} · {new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
                         b.status === "pending"    ? "border-amber-500/40 text-amber-400" :
@@ -572,42 +590,65 @@ export default function SuperadminDashboard() {
                       }[b.status] ?? b.status}</span>
                     </div>
                     {meta && (
-                      <div className="grid sm:grid-cols-2 gap-1">
-                        <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                          <MapPin className="w-3 h-3 text-emerald-400 mt-0.5 shrink-0" />
-                          <span className="truncate">{meta.pickup?.address ?? "—"}</span>
+                      <div className="mx-4 mb-3 rounded-lg bg-background/60 border border-border p-3 space-y-2">
+                        <div className="flex items-start gap-2 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                          <div><span className="text-muted-foreground font-medium">Pickup: </span><span>{meta.pickup?.address ?? "—"}</span></div>
                         </div>
-                        <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                          <Navigation2 className="w-3 h-3 text-red-400 mt-0.5 shrink-0" />
-                          <span className="truncate">{meta.dropoff?.address ?? "—"}</span>
+                        <div className="flex items-start gap-2 text-xs">
+                          <Navigation2 className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                          <div><span className="text-muted-foreground font-medium">Dropoff: </span><span>{meta.dropoff?.address ?? "—"}</span></div>
                         </div>
-                        {meta.distanceKm > 0 && (
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground sm:col-span-2">
-                            <Route className="w-3 h-3 text-violet-400" />
-                            <span>{meta.distanceKm?.toFixed(1)} km · {Math.round(meta.durationMin ?? 0)} min est.</span>
+                        {distKm > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Route className="w-3 h-3 text-violet-400" />{distKm.toFixed(1)} km · {Math.round(meta.durationMin ?? 0)} min est.
+                            </span>
+                            <span className="text-xs text-right">
+                              <span className="text-muted-foreground">₱30 base + ₱8×{distKm.toFixed(1)}km</span>
+                              <span className="ml-2 font-bold text-emerald-400">= ₱{Number(b.amount).toFixed(0)}</span>
+                            </span>
                           </div>
                         )}
+                        {distKm === 0 && <div className="flex justify-end"><span className="font-bold text-emerald-400">₱{Number(b.amount).toFixed(0)}</span></div>}
                       </div>
                     )}
                     {b.driver_id && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <User className="w-3 h-3 text-violet-400 shrink-0" />
-                        <span>Driver: <span className="font-medium text-violet-300">{nameOf(b.driver_id)}</span></span>
+                      <div className="mx-4 mb-3 flex items-center gap-2 p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                        <Car className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                        <span className="text-xs text-muted-foreground">Driver:</span>
+                        <span className="text-xs font-semibold text-violet-300">{nameOf(b.driver_id)}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {([
-                        { key: "confirmed",  label: "Accepted",   active: "bg-cyan-500/20 text-cyan-300 border-cyan-500/50",        idle: "border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10" },
-                        { key: "picked_up",  label: "Picked Up",  active: "bg-blue-500/20 text-blue-300 border-blue-500/50",        idle: "border-blue-500/40 text-blue-400 hover:bg-blue-500/10" },
-                        { key: "on_the_way", label: "On The Way", active: "bg-violet-500/20 text-violet-300 border-violet-500/50",  idle: "border-violet-500/40 text-violet-400 hover:bg-violet-500/10" },
-                        { key: "completed",  label: "Completed",  active: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50", idle: "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" },
-                        { key: "cancelled",  label: "Cancel",     active: "bg-red-500/20 text-red-300 border-red-500/50",           idle: "border-red-500/40 text-red-400 hover:bg-red-500/10" },
-                        { key: "rejected",   label: "Reject",     active: "bg-gray-500/20 text-gray-300 border-gray-500/50",        idle: "border-gray-500/40 text-gray-400 hover:bg-gray-500/10" },
-                      ] as const).map(({ key, label, active, idle }) => (
-                        <button key={key} disabled={b.status === key} onClick={() => overrideBooking(b.id, key)}
-                          className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${b.status === key ? active : idle}`}>{label}</button>
-                      ))}
+                    <div className="px-4 pb-3">
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Override status</p>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {([
+                          { key: "confirmed",  label: "Accepted",   active: "bg-cyan-500/20 text-cyan-300 border-cyan-500/50",        idle: "border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10" },
+                          { key: "picked_up",  label: "Picked Up",  active: "bg-blue-500/20 text-blue-300 border-blue-500/50",        idle: "border-blue-500/40 text-blue-400 hover:bg-blue-500/10" },
+                          { key: "on_the_way", label: "On The Way", active: "bg-violet-500/20 text-violet-300 border-violet-500/50",  idle: "border-violet-500/40 text-violet-400 hover:bg-violet-500/10" },
+                          { key: "completed",  label: "Completed",  active: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50", idle: "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" },
+                          { key: "cancelled",  label: "Cancel",     active: "bg-red-500/20 text-red-300 border-red-500/50",           idle: "border-red-500/40 text-red-400 hover:bg-red-500/10" },
+                          { key: "rejected",   label: "Reject",     active: "bg-gray-500/20 text-gray-300 border-gray-500/50",        idle: "border-gray-500/40 text-gray-400 hover:bg-gray-500/10" },
+                        ] as const).map(({ key, label, active, idle }) => (
+                          <button key={key} disabled={b.status === key} onClick={() => overrideBooking(b.id, key)}
+                            className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${b.status === key ? active : idle}`}>{label}</button>
+                        ))}
+                      </div>
                     </div>
+                    {rating && (
+                      <div className="px-4 pb-4 pt-3 border-t border-border">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-0.5">
+                            {[1,2,3,4,5].map((i) => (
+                              <Star key={i} className={`w-3.5 h-3.5 ${i <= rating.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
+                            ))}
+                          </div>
+                          <span className="text-xs font-semibold text-amber-400">{rating.rating}/5</span>
+                          {rating.comment && <span className="text-xs text-muted-foreground italic">"{rating.comment}"</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

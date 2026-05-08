@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso, User } from "lucide-react";
+import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso, User, MapPin, Navigation2, Car, Star, Route } from "lucide-react";
 
 type TimeVal = { h: string; m: string; p: "AM" | "PM" };
 const to24h = (t: TimeVal) => { let h = parseInt(t.h); if (t.p === "PM" && h !== 12) h += 12; if (t.p === "AM" && h === 12) h = 0; return `${String(h).padStart(2, "0")}:${t.m}`; };
@@ -102,6 +102,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [driverSelect, setDriverSelect] = useState<Record<string, string>>({});
+  const [busyDriverIds, setBusyDriverIds] = useState<Set<string>>(new Set());
+  const [ratings, setRatings] = useState<Record<string, { rating: number; comment: string | null }>>({});
 
   useEffect(() => { void load(); }, [user]);
 
@@ -121,6 +123,9 @@ export default function AdminDashboard() {
     setServices((svc.data ?? []) as Service[]);
     const bkData = (bk.data ?? []) as unknown as Booking[];
     setBookings(bkData);
+    // Track which drivers currently have an active ride
+    const activeBk = bkData.filter((b) => ["confirmed", "picked_up", "on_the_way"].includes(b.status) && b.driver_id);
+    setBusyDriverIds(new Set(activeBk.map((b) => b.driver_id as string)));
     const uids = [...new Set(bkData.map((b) => b.user_id))];
     if (uids.length > 0) {
       const { data: prof } = await supabase.from("profiles").select("user_id,display_name,email,username").in("user_id", uids);
@@ -132,6 +137,17 @@ export default function AdminDashboard() {
       setDrivers((dProfs ?? []) as Driver[]);
     } else {
       setDrivers([]);
+    }
+    // Load ratings for completed bookings
+    const completedIds = bkData.filter((b) => b.status === "completed").map((b) => b.id);
+    if (completedIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rData } = await (supabase as any).from("ratings").select("booking_id, rating, comment").in("booking_id", completedIds);
+      if (rData) {
+        const map: Record<string, { rating: number; comment: string | null }> = {};
+        (rData as { booking_id: string; rating: number; comment: string | null }[]).forEach((r) => { map[r.booking_id] = { rating: r.rating, comment: r.comment }; });
+        setRatings(map);
+      }
     }
   }
 
@@ -341,76 +357,152 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 className="font-semibold text-lg">Bookings <span className="text-sm font-normal text-muted-foreground">({filteredBookings.length})</span></h2>
                 <div className="flex flex-wrap gap-1">
-                  {(["all", ...STATUSES] as const).map((s) => (
-                    <button key={s} onClick={() => setStatusFilter(s as Status | "all")}
-                      className={`h-7 px-3 text-xs font-medium rounded-full border transition-all capitalize ${
-                        statusFilter === s ? STATUS_BTN_ACTIVE[s] : STATUS_BTN[s]
-                      }`}>{s}</button>
+                  {([{ v: "all", label: "All" }, ...STATUSES.map((s) => ({ v: s, label: STATUS_LABELS[s] }))] as { v: string; label: string }[]).map(({ v, label }) => (
+                    <button key={v} onClick={() => setStatusFilter(v as Status | "all")}
+                      className={`h-7 px-3 text-xs font-medium rounded-full border transition-all ${
+                        statusFilter === v ? (STATUS_BTN_ACTIVE[v] ?? "bg-secondary text-foreground border-border") : (STATUS_BTN[v] ?? "border-border text-muted-foreground hover:bg-secondary")
+                      }`}>{label}</button>
                   ))}
                 </div>
               </div>
-              <div className="space-y-2 max-h-[560px] overflow-y-auto">
-                {filteredBookings.length === 0 && <p className="text-sm text-muted-foreground">No bookings found.</p>}
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                {filteredBookings.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No bookings found.</p>}
                 {filteredBookings.map((b) => {
                   const svc = services.find((s) => s.id === b.service_id);
                   const meta = parseNotes(b.notes);
+                  const rating = ratings[b.id];
+                  const distKm = meta?.distanceKm ?? 0;
+                  const basefare = 30;
+                  const perKm = 8;
                   return (
-                    <div key={b.id} className="p-3 rounded-lg bg-secondary border border-border space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <div className="font-medium text-sm">{svc?.name ?? "—"} <span className="text-muted-foreground">·</span> <span className="text-xs text-muted-foreground">{nameOf(b.user_id)}</span></div>
-                          <div className="text-xs text-muted-foreground">{new Date(b.booking_date).toLocaleString()} · <span className="text-emerald-400 font-medium">₱{Number(b.amount).toFixed(0)}</span> · {branches.find((br) => br.id === b.branch_id)?.name}</div>
+                    <div key={b.id} className="rounded-xl border border-border bg-secondary overflow-hidden">
+
+                      {/* ── Header ── */}
+                      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0">
+                              <User className="w-3.5 h-3.5 text-violet-400" />
+                            </div>
+                            <span className="font-semibold text-sm">{nameOf(b.user_id)}</span>
+                            <span className="text-muted-foreground text-xs">·</span>
+                            <span className="text-sm text-muted-foreground">{svc?.name ?? "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground pl-8">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            {new Date(b.booking_date).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            <span>·</span>
+                            <Building2 className="w-3 h-3 shrink-0" />
+                            {branches.find((br) => br.id === b.branch_id)?.name ?? "—"}
+                          </div>
                         </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${STATUS_COLORS[b.status] ?? ""}`}>{STATUS_LABELS[b.status] ?? b.status}</span>
+                        <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_COLORS[b.status] ?? ""}`}>
+                          {STATUS_LABELS[b.status] ?? b.status}
+                        </span>
                       </div>
+
+                      {/* ── Route + Fare ── */}
                       {meta && (
-                        <div className="grid sm:grid-cols-2 gap-1">
-                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                            <span className="w-3 h-3 mt-0.5 shrink-0 text-emerald-400">●</span>
-                            <span className="truncate">{meta.pickup?.address ?? "—"}</span>
+                        <div className="mx-4 mb-3 rounded-lg bg-background/60 border border-border p-3 space-y-2">
+                          <div className="flex items-start gap-2 text-xs">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                            <div><span className="text-muted-foreground font-medium">Pickup: </span><span className="text-foreground">{meta.pickup?.address ?? "—"}</span></div>
                           </div>
-                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                            <span className="w-3 h-3 mt-0.5 shrink-0 text-red-400">●</span>
-                            <span className="truncate">{meta.dropoff?.address ?? "—"}</span>
+                          <div className="flex items-start gap-2 text-xs">
+                            <Navigation2 className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                            <div><span className="text-muted-foreground font-medium">Dropoff: </span><span className="text-foreground">{meta.dropoff?.address ?? "—"}</span></div>
                           </div>
-                          {meta.distanceKm > 0 && (
-                            <span className="text-xs text-muted-foreground sm:col-span-2">{meta.distanceKm?.toFixed(1)} km · {Math.round(meta.durationMin ?? 0)} min est.</span>
+                          {distKm > 0 && (
+                            <div className="flex items-center justify-between pt-2 border-t border-border">
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1"><Route className="w-3 h-3 text-violet-400" />{distKm.toFixed(1)} km</span>
+                                <span>·</span>
+                                <span>{Math.round(meta.durationMin ?? 0)} min est.</span>
+                              </div>
+                              <div className="text-xs text-right">
+                                <span className="text-muted-foreground">₱{basefare} base + ₱{perKm}×{distKm.toFixed(1)}km</span>
+                                <span className="ml-2 font-bold text-emerald-400 text-sm">= ₱{Number(b.amount).toFixed(0)}</span>
+                              </div>
+                            </div>
+                          )}
+                          {distKm === 0 && (
+                            <div className="flex justify-end pt-1">
+                              <span className="font-bold text-emerald-400 text-sm">₱{Number(b.amount).toFixed(0)}</span>
+                            </div>
                           )}
                         </div>
                       )}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(["confirmed", "picked_up", "on_the_way", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
-                          <button key={s} disabled={b.status === s} onClick={() => setStatus(b.id, s)}
-                            className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
-                              b.status === s ? (STATUS_BTN_ACTIVE[s] ?? "") : STATUS_BTN[s]
-                            }`}>{STATUS_LABELS[s]}</button>
-                        ))}
-                      </div>
-                      {/* Driver assignment */}
-                      <div className="flex items-center gap-2 pt-1.5 border-t border-border">
+
+                      {/* ── Driver assignment ── */}
+                      <div className="px-4 pb-3">
                         {b.driver_id ? (
-                          <div className="flex items-center gap-1.5 text-xs flex-1">
-                            <User className="w-3 h-3 text-violet-400 shrink-0" />
-                            <span className="text-muted-foreground">Driver:</span>
-                            <span className="font-medium text-violet-300">{driverName(b.driver_id)}</span>
-                            <button onClick={() => void assignDriver(b.id, null, b.status)} className="ml-auto text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                            <Car className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                            <span className="text-xs text-muted-foreground">Assigned driver:</span>
+                            <span className="text-xs font-semibold text-violet-300 flex-1">{driverName(b.driver_id)}</span>
+                            {busyDriverIds.has(b.driver_id) && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">On a ride</span>
+                            )}
+                            {!["completed","cancelled","rejected"].includes(b.status) && (
+                              <button onClick={() => void assignDriver(b.id, null, b.status)} className="text-red-400 hover:text-red-300 ml-1" title="Remove driver">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
-                        ) : drivers.length > 0 ? (
-                          <>
-                            <select value={driverSelect[b.id] ?? ""} onChange={(e) => setDriverSelect((p) => ({ ...p, [b.id]: e.target.value }))}
-                              className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs">
-                              <option value="">Assign driver…</option>
-                              {drivers.map((d) => <option key={d.user_id} value={d.user_id}>{driverName(d.user_id)}</option>)}
-                            </select>
-                            <button disabled={!driverSelect[b.id]} onClick={() => { const id = driverSelect[b.id]; if (id) void assignDriver(b.id, id, b.status); }}
-                              className="h-7 px-2.5 text-xs rounded-md border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 disabled:opacity-30 disabled:cursor-not-allowed">
-                              Assign
-                            </button>
-                          </>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic flex items-center gap-1"><User className="w-3 h-3" />No drivers available</span>
+                          <div className="flex items-center gap-2">
+                            <Car className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            {drivers.length > 0 ? (
+                              <>
+                                <select value={driverSelect[b.id] ?? ""} onChange={(e) => setDriverSelect((p) => ({ ...p, [b.id]: e.target.value }))}
+                                  className="h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs">
+                                  <option value="">Select available driver…</option>
+                                  {drivers.map((d) => {
+                                    const busy = busyDriverIds.has(d.user_id);
+                                    return <option key={d.user_id} value={d.user_id} disabled={busy}>{busy ? "🔴 " : "🟢 "}{driverName(d.user_id)}{busy ? " (on a ride)" : " (available)"}</option>;
+                                  })}
+                                </select>
+                                <button disabled={!driverSelect[b.id]} onClick={() => { const id = driverSelect[b.id]; if (id) void assignDriver(b.id, id, b.status); }}
+                                  className="h-8 px-3 text-xs rounded-md border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 disabled:opacity-30 disabled:cursor-not-allowed font-medium">
+                                  Assign
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">No drivers in your branches</span>
+                            )}
+                          </div>
                         )}
                       </div>
+
+                      {/* ── Status override buttons ── */}
+                      {!["completed","cancelled","rejected"].includes(b.status) && (
+                        <div className="px-4 pb-3">
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Override status</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(["confirmed", "picked_up", "on_the_way", "completed", "cancelled", "rejected"] as Status[]).map((s) => (
+                              <button key={s} disabled={b.status === s} onClick={() => setStatus(b.id, s)}
+                                className={`h-7 px-2.5 text-xs font-medium rounded-full border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                                  b.status === s ? (STATUS_BTN_ACTIVE[s] ?? "") : STATUS_BTN[s]
+                                }`}>{STATUS_LABELS[s]}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Rating (completed rides) ── */}
+                      {rating && (
+                        <div className="px-4 pb-4 border-t border-border pt-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-0.5">
+                              {[1,2,3,4,5].map((i) => (
+                                <Star key={i} className={`w-3.5 h-3.5 ${i <= rating.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
+                              ))}
+                            </div>
+                            <span className="text-xs font-semibold text-amber-400">{rating.rating}/5</span>
+                            {rating.comment && <span className="text-xs text-muted-foreground italic">"{rating.comment}"</span>}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
