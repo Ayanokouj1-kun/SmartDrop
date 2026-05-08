@@ -126,17 +126,16 @@ export default function DriverDashboard() {
 
   async function updateStatus(id: string, status: string) {
     if (status === "confirmed" && user) {
-      // Atomic claim — works for both unclaimed rides (driver_id is null)
-      // and admin-pre-assigned rides (driver_id already = user.id)
+      // Only accept rides that were pre-assigned by an admin (driver_id = user.id)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("bookings") as any)
         .update({ status: "confirmed", driver_id: user.id })
         .eq("id", id).eq("status", "pending")
-        .or(`driver_id.is.null,driver_id.eq.${user.id}`)
+        .eq("driver_id", user.id)
         .select("id");
       if (error) return toast.error(error.message);
       if (!data || data.length === 0) {
-        toast.error("This ride was already claimed by another driver.");
+        toast.error("You can only accept rides assigned to you by an admin.");
         void load();
         return;
       }
@@ -203,14 +202,22 @@ export default function DriverDashboard() {
 
         {/* Status-driven action buttons */}
         {b.status === "pending" && (
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border">
-            <Button size="sm" onClick={() => updateStatus(b.id, "confirmed")} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Accept
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => updateStatus(b.id, "rejected")} className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
-              <X className="w-3.5 h-3.5 mr-1" />Decline
-            </Button>
-          </div>
+          b.driver_id === user?.id ? (
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border">
+              <Button size="sm" onClick={() => updateStatus(b.id, "confirmed")} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Accept
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => updateStatus(b.id, "rejected")} className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20">
+                <X className="w-3.5 h-3.5 mr-1" />Decline
+              </Button>
+            </div>
+          ) : (
+            <div className="pt-1 border-t border-border">
+              <p className="text-xs text-center text-muted-foreground italic py-1">
+                Waiting for admin to assign a driver…
+              </p>
+            </div>
+          )
         )}
         {b.status === "confirmed" && (
           <div className="pt-1 border-t border-border">
