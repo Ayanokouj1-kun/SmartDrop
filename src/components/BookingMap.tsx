@@ -52,12 +52,13 @@ interface Props {
   baseFare?: number;
 }
 
-async function reverseGeocode(lng: number, lat: number): Promise<string> {
+async function reverseGeocode(lng: number, lat: number): Promise<string | null> {
   try {
-    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${TOKEN}&types=address,place&limit=1`);
+    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${TOKEN}&types=address,neighborhood,locality,place,district,poi&limit=1`);
     const data = await res.json();
-    return data.features?.[0]?.place_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  } catch { return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+    if (!data.features || data.features.length === 0) return null; // ocean / open water
+    return data.features[0].place_name ?? null;
+  } catch { return null; }
 }
 
 async function forwardGeocode(query: string): Promise<[number, number] | null> {
@@ -154,29 +155,41 @@ export default function BookingMap({ onUpdate, baseFare }: Props) {
       setCurrentPreset(initialPreset);
 
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
+        let settled = false;
+        // watchPosition gives real GPS fix instead of IP/tower estimate
+        const wid = navigator.geolocation.watchPosition(
           async (pos) => {
-            const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
-            // Set pickup immediately so marker appears without waiting for geocode
-            setPickup(coords);
-            setPickupSearch("Getting address…");
-            setMode("dropoff");
-            modeRef.current = "dropoff";
-            // Resolve address in background
-            const addr = await reverseGeocode(coords[0], coords[1]);
-            setPickupAddress(addr);
-            setPickupSearch(addr);
-            toast.success("Current location set as pickup");
+            if (settled) return;
+            // Accept once accuracy is ≤150m (true GPS), or after first result
+            if (pos.coords.accuracy <= 150 || !settled) {
+              settled = true;
+              navigator.geolocation.clearWatch(wid);
+              const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+              setPickup(coords);
+              setPickupSearch("Getting address…");
+              setMode("dropoff");
+              modeRef.current = "dropoff";
+              const addr = await reverseGeocode(coords[0], coords[1]);
+              setPickupAddress(addr ?? "Current location");
+              setPickupSearch(addr ?? "Current location");
+              toast.success("Current location set as pickup");
+            }
           },
-          () => { /* silently ignore initial location error */ },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          () => { /* permission denied or unavailable */ },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
+        // Stop watching after 15 s regardless
+        setTimeout(() => { if (!settled) navigator.geolocation.clearWatch(wid); }, 15000);
       }
     });
 
     map.on("click", async (e) => {
       const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
       const addr = await reverseGeocode(coords[0], coords[1]);
+      if (!addr) {
+        toast.error("Cannot place marker in water or ocean — pick a land location.");
+        return;
+      }
       if (modeRef.current === "pickup") {
         setPickup(coords); setPickupAddress(addr); setPickupSearch(addr);
       } else {
@@ -203,23 +216,23 @@ export default function BookingMap({ onUpdate, baseFare }: Props) {
     };
   }, []);
 
-  // place pickup marker
+  // place pickup marker — wait for mapReady so marker is always visible
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !pickup) return;
+    if (!map || !pickup || !mapReady) return;
     pickupMarkerRef.current?.remove();
     pickupMarkerRef.current = new mapboxgl.Marker({ element: makeMarkerEl("#10b981"), anchor: "bottom" }).setLngLat(pickup).addTo(map);
     map.flyTo({ center: pickup, zoom: 17, pitch: 62, speed: 1.2 });
-  }, [pickup]);
+  }, [pickup, mapReady]);
 
   // place dropoff marker
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !dropoff) return;
+    if (!map || !dropoff || !mapReady) return;
     dropoffMarkerRef.current?.remove();
     dropoffMarkerRef.current = new mapboxgl.Marker({ element: makeMarkerEl("#ef4444"), anchor: "bottom" }).setLngLat(dropoff).addTo(map);
     map.flyTo({ center: dropoff, zoom: 17, pitch: 62, speed: 1.2 });
-  }, [dropoff]);
+  }, [dropoff, mapReady]);
 
   // draw route
   useEffect(() => {
@@ -263,8 +276,9 @@ export default function BookingMap({ onUpdate, baseFare }: Props) {
     setSearching(type);
     const coords = await forwardGeocode(type === "pickup" ? pickupSearch : dropoffSearch);
     setSearching(null);
-    if (!coords) { return; }
+    if (!coords) { toast.error("Location not found. Try a more specific address."); return; }
     const addr = await reverseGeocode(coords[0], coords[1]);
+    if (!addr) { toast.error("That location appears to be in water. Try a nearby land address."); return; }
     if (type === "pickup") { setPickup(coords); setPickupAddress(addr); setPickupSearch(addr); }
     else { setDropoff(coords); setDropoffAddress(addr); setDropoffSearch(addr); }
   };
@@ -274,9 +288,23 @@ export default function BookingMap({ onUpdate, baseFare }: Props) {
     if (!map || !navigator.geolocation) return;
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 17, pitch: 62, speed: 1.4 }); setLocating(false); },
+      async (pos) => {
+        const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        map.flyTo({ center: coords, zoom: 17, pitch: 62, speed: 1.4 });
+        // Also set as pickup if no pickup yet
+        if (!pickup) {
+          setPickup(coords);
+          setPickupSearch("Getting address…");
+          setMode("dropoff");
+          modeRef.current = "dropoff";
+          const addr = await reverseGeocode(coords[0], coords[1]);
+          setPickupAddress(addr ?? "Current location");
+          setPickupSearch(addr ?? "Current location");
+        }
+        setLocating(false);
+      },
       () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
