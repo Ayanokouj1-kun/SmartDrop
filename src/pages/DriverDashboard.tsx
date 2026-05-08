@@ -60,10 +60,12 @@ export default function DriverDashboard() {
         .or(`driver_id.is.null,driver_id.eq.${user.id}`)
         .order("booking_date", { ascending: true }),
       // Active: confirmed rides assigned to this driver
-      supabase.from("bookings").select("*").eq("status", "confirmed").eq("driver_id", user.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("bookings") as any).select("*").eq("status", "confirmed").eq("driver_id", user.id)
         .order("booking_date", { ascending: true }),
       // History: completed/rejected/cancelled rides this driver handled
-      supabase.from("bookings").select("*").in("status", ["completed", "rejected", "cancelled"])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("bookings") as any).select("*").in("status", ["completed", "rejected", "cancelled"])
         .eq("driver_id", user.id)
         .order("booking_date", { ascending: false }).limit(40),
       supabase.from("services").select("id, name"),
@@ -105,15 +107,26 @@ export default function DriverDashboard() {
   };
 
   async function updateStatus(id: string, status: string) {
-    const updates: Record<string, unknown> = { status };
-    if (status === "confirmed" && user) updates.driver_id = user.id;
-    const { error } = await supabase.from("bookings").update(updates).eq("id", id);
+    if (status === "confirmed" && user) {
+      // Atomic claim — only succeeds if no driver has taken it yet
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("bookings") as any)
+        .update({ status: "confirmed", driver_id: user.id })
+        .eq("id", id).eq("status", "pending").is("driver_id", null)
+        .select("id");
+      if (error) return toast.error(error.message);
+      if (!data || data.length === 0) {
+        toast.error("This ride was already claimed by another driver.");
+        void load();
+        return;
+      }
+      toast.success("Ride accepted!");
+      void load();
+      return;
+    }
+    const { error } = await supabase.from("bookings").update({ status: status as "completed" | "rejected" | "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
-    const labels: Record<string, string> = {
-      confirmed: "Ride accepted!",
-      completed: "Ride completed!",
-      rejected:  "Ride declined.",
-    };
+    const labels: Record<string, string> = { completed: "Ride completed!", rejected: "Ride declined." };
     toast.success(labels[status] ?? "Status updated");
     void load();
   }

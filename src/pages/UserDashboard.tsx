@@ -70,7 +70,7 @@ export default function UserDashboard() {
           if (msg[s]) toast(msg[s]);
         }
         const { data } = await supabase.from("bookings").select("*").eq("user_id", user.id).order("booking_date", { ascending: false });
-        setBookings((data ?? []) as Booking[]);
+        setBookings((data ?? []) as unknown as Booking[]);
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
@@ -101,7 +101,7 @@ export default function UserDashboard() {
       distanceKm: route.distanceKm,
       durationMin: route.durationMin,
     });
-    const amount = Math.round(svc.price + route.distanceKm * 15);
+    const amount = Math.round(svc.price + route.distanceKm * 8);
     const { error } = await supabase.from("bookings").insert({
       user_id: user.id, service_id: svc.id, branch_id: svc.branch_id,
       booking_date: new Date(date).toISOString(),
@@ -154,6 +154,10 @@ export default function UserDashboard() {
             <p className="text-xs text-muted-foreground mt-0.5">Pin your pickup and dropoff on the map, or search an address.</p>
           </div>
 
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300">
+            <Zap className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>Book your ride — a nearby driver will accept and head to your pickup. No need to choose a driver.</span>
+          </div>
           <BookingMap onUpdate={setRoute} baseFare={selectedSvc?.price} />
 
           {/* Booking details */}
@@ -197,7 +201,7 @@ export default function UserDashboard() {
                 </div>
                 <div className="flex items-center gap-2 col-span-2 border-t border-border pt-2 mt-1 justify-between">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="w-3 h-3" />{Math.round(route.durationMin)} min · {route.distanceKm.toFixed(1)} km</span>
-                  <span className="flex items-center gap-1 text-sm font-bold text-emerald-400"><DollarSign className="w-3.5 h-3.5" />₱{selectedSvc ? Math.round(selectedSvc.price + route.distanceKm * 15) : route.fare} est.</span>
+                  <span className="flex items-center gap-1 text-sm font-bold text-emerald-400"><DollarSign className="w-3.5 h-3.5" />₱{selectedSvc ? Math.round(selectedSvc.price + route.distanceKm * 8) : route.fare} est.</span>
                 </div>
               </div>
             )}
