@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso, User, MapPin, Navigation2, Car, Star, Route } from "lucide-react";
+import { Building2, Package, Calendar, DollarSign, Pencil, Check, X, Clock, Tag, AlignLeft, PhilippinePeso, User, MapPin, Navigation2, Car, Star, Route, MessageSquare } from "lucide-react";
 
 type TimeVal = { h: string; m: string; p: "AM" | "PM" };
 const to24h = (t: TimeVal) => { let h = parseInt(t.h); if (t.p === "PM" && h !== 12) h += 12; if (t.p === "AM" && h === 12) h = 0; return `${String(h).padStart(2, "0")}:${t.m}`; };
@@ -250,6 +250,7 @@ export default function AdminDashboard() {
         <Tabs defaultValue="services" className="space-y-4">
           <TabsList className="bg-secondary border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="services" className="gap-1.5"><Package className="w-3.5 h-3.5" />Services</TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" />Feedback</TabsTrigger>
             <TabsTrigger value="bookings" className="gap-1.5"><Calendar className="w-3.5 h-3.5" />Bookings</TabsTrigger>
             <TabsTrigger value="branches" className="gap-1.5"><Building2 className="w-3.5 h-3.5" />My Branches</TabsTrigger>
           </TabsList>
@@ -507,6 +508,76 @@ export default function AdminDashboard() {
                   );
                 })}
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* ── Driver Feedback ── */}
+          <TabsContent value="feedback">
+            <Card className="p-6 bg-card border-border shadow-card">
+              <h2 className="font-semibold text-lg mb-1">Driver Feedback</h2>
+              <p className="text-xs text-muted-foreground mb-5">Ratings and comments left by customers for completed rides in your branches.</p>
+              {Object.keys(ratings).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No feedback yet — ratings appear here once customers rate completed rides.</p>
+              ) : (() => {
+                // Build per-driver summary
+                const driverMap: Record<string, { name: string; ratings: { stars: number; comment: string | null; customer: string; date: string }[] }> = {};
+                bookings.filter((b) => b.status === "completed" && ratings[b.id] && b.driver_id).forEach((b) => {
+                  const r = ratings[b.id];
+                  const did = b.driver_id!;
+                  if (!driverMap[did]) driverMap[did] = { name: driverName(did), ratings: [] };
+                  driverMap[did].ratings.push({ stars: r.rating, comment: r.comment, customer: nameOf(b.user_id), date: b.booking_date });
+                });
+                return (
+                  <div className="space-y-5">
+                    {Object.entries(driverMap).map(([did, info]) => {
+                      const avg = info.ratings.reduce((s, r) => s + r.stars, 0) / info.ratings.length;
+                      return (
+                        <div key={did} className="rounded-xl border border-border bg-secondary overflow-hidden">
+                          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-violet-500/5">
+                            <div className="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0">
+                              <Car className="w-4 h-4 text-violet-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm">{info.name}</div>
+                              <div className="text-xs text-muted-foreground">{info.ratings.length} review{info.ratings.length !== 1 ? "s" : ""}</div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-0.5">
+                                {[1,2,3,4,5].map((i) => (
+                                  <Star key={i} className={`w-3.5 h-3.5 ${i <= Math.round(avg) ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
+                                ))}
+                              </div>
+                              <span className="text-sm font-bold text-amber-400">{avg.toFixed(1)}</span>
+                            </div>
+                          </div>
+                          <div className="divide-y divide-border max-h-[320px] overflow-y-auto">
+                            {info.ratings.map((r, i) => (
+                              <div key={i} className="px-4 py-3 flex items-start gap-3">
+                                <div className="flex items-center gap-0.5 mt-0.5 shrink-0">
+                                  {[1,2,3,4,5].map((j) => (
+                                    <Star key={j} className={`w-3 h-3 ${j <= r.stars ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`} />
+                                  ))}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium">{r.customer}</span>
+                                    <span className="text-[10px] text-muted-foreground">{new Date(r.date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span>
+                                  </div>
+                                  {r.comment ? (
+                                    <p className="text-xs text-muted-foreground italic mt-0.5">"{r.comment}"</p>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground/50 italic mt-0.5">No comment</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </Card>
           </TabsContent>
 

@@ -102,6 +102,12 @@ export default function UserDashboard() {
     setServices((svc.data ?? []) as Service[]);
     setBranches((br.data ?? []) as Branch[]);
     setBookings((bk.data ?? []) as Booking[]);
+    // Load already-submitted ratings so the Rate Driver button stays hidden after refresh
+    if (user) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rData } = await (supabase as any).from("ratings").select("booking_id").eq("user_id", user.id);
+      if (rData) setRatedIds(new Set((rData as { booking_id: string }[]).map((r) => r.booking_id)));
+    }
   }
 
   async function handleBook(e: React.FormEvent) {
@@ -372,7 +378,7 @@ export default function UserDashboard() {
                       <div className="space-y-2 pt-2 border-t border-border">
                         <div className="flex gap-1 justify-center">
                           {[1,2,3,4,5].map((star) => (
-                            <button key={star} onClick={() => setRatingValue(star)}
+                            <button type="button" key={star} onClick={() => setRatingValue(star)}
                               className={`text-xl transition-colors ${star <= ratingValue ? "text-amber-400" : "text-muted-foreground/30"}`}>
                               <Star className="w-5 h-5 fill-current" />
                             </button>

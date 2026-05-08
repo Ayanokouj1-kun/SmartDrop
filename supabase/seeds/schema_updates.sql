@@ -67,7 +67,18 @@ INSERT INTO public.platform_settings (key, value) VALUES
   ('per_km_rate',        '8')
 ON CONFLICT (key) DO NOTHING;
 
--- 6. RLS: drivers can view and update bookings
+-- 6. RLS: allow authenticated users to see driver roles + all profiles (admin driver-assign feature)
+DROP POLICY IF EXISTS "authenticated can view driver roles" ON public.user_roles;
+CREATE POLICY "authenticated can view driver roles" ON public.user_roles
+  FOR SELECT TO authenticated
+  USING (role = 'driver');
+
+DROP POLICY IF EXISTS "authenticated can read all profiles" ON public.profiles;
+CREATE POLICY "authenticated can read all profiles" ON public.profiles
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- 7. RLS: drivers can view and update bookings
 DROP POLICY IF EXISTS "drivers can view bookings" ON public.bookings;
 CREATE POLICY "drivers can view bookings" ON public.bookings
   FOR SELECT TO authenticated
