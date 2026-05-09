@@ -394,13 +394,13 @@ export default function SuperadminDashboard() {
 
         {/* ── Users & Roles ── */}
         <TabsContent value="users">
-          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[1fr_340px] lg:gap-4 xl:gap-6">
+          <Card className="p-4 sm:p-6 bg-card border-border shadow-card">
+            {/* Header + filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="font-semibold text-lg">
                 Users & Roles
                 <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredProfiles.length}/{profiles.length})</span>
               </h2>
-              {/* Filters */}
               <div className="flex flex-wrap items-center gap-2">
                 {/* Search */}
                 <div className="relative">
@@ -409,7 +409,7 @@ export default function SuperadminDashboard() {
                     placeholder="Search name / email…"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    className="pl-8 h-8 w-44 bg-secondary border-border text-xs"
+                    className="pl-8 h-8 w-full sm:w-44 bg-secondary border-border text-xs"
                   />
                   {userSearch && (
                     <button onClick={() => setUserSearch("")}
@@ -419,14 +419,14 @@ export default function SuperadminDashboard() {
                   )}
                 </div>
                 {/* Role filter */}
-                <div className="flex items-center rounded-md border border-border overflow-hidden text-xs h-8">
+                <div className="flex flex-wrap items-center gap-1">
                   {(["all", "superadmin", "admin", "driver", "user"] as const).map((v) => (
                     <button key={v}
                       onClick={() => setUserRoleFilter(v)}
-                      className={`px-2.5 h-full transition-colors ${
+                      className={`h-7 px-2.5 rounded-full border text-xs transition-colors ${
                         userRoleFilter === v
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                          ? "bg-primary text-primary-foreground border-primary font-medium"
+                          : "bg-secondary border-border text-muted-foreground hover:text-foreground"
                       }`}>
                       {v === "all" ? "All roles" : v}
                     </button>
@@ -442,13 +442,14 @@ export default function SuperadminDashboard() {
                           ? "bg-primary text-primary-foreground font-medium"
                           : "bg-secondary text-muted-foreground hover:text-foreground"
                       }`}>
-                      {v === "all" ? "All status" : v}
+                      {v === "all" ? "All" : v}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
+            {/* User list */}
             <div className="space-y-2 max-h-[55vh] md:max-h-[520px] overflow-y-auto">
               {filteredProfiles.map((p) => {
                 const r = rolesOf(p.user_id);
@@ -456,19 +457,19 @@ export default function SuperadminDashboard() {
                 const locked = isSuperadmin(p.user_id) || isDriverRow;
                 return (
                   <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-secondary border border-border">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {isSuperadmin(p.user_id) && <Shield className="w-4 h-4 text-violet-400 shrink-0" title="Superadmin — locked" />}
                       {isDriverRow && <Car className="w-4 h-4 text-violet-400 shrink-0" title="Driver — locked" />}
-                      <div>
-                        <div className="font-medium flex items-center gap-1.5">
-                          {p.display_name || p.email}
+                      <div className="min-w-0">
+                        <div className="font-medium flex flex-wrap items-center gap-1.5">
+                          <span className="truncate">{p.display_name || p.email}</span>
                           {isSuperadmin(p.user_id) && <Badge className="text-[10px] py-0 px-1.5 bg-violet-500/20 text-violet-300 border-violet-500/30">superadmin</Badge>}
                           {isDriverRow && <Badge className="text-[10px] py-0 px-1.5 bg-violet-500/20 text-violet-300 border-violet-500/30">driver</Badge>}
                         </div>
-                        <div className="text-xs text-muted-foreground">{p.email}{p.username ? ` · @${p.username}` : ""}</div>
+                        <div className="text-xs text-muted-foreground truncate">{p.email}{p.username ? ` · @${p.username}` : ""}</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {locked ? (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Lock className="w-3.5 h-3.5" />{isDriverRow ? "Driver — role fixed" : "Role locked"}
@@ -493,7 +494,7 @@ export default function SuperadminDashboard() {
                 </p>
               )}
             </div>
-          </div>
+          </Card>
         </TabsContent>
 
         {/* ── Branches ── */}
