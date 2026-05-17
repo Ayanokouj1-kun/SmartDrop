@@ -393,104 +393,158 @@ export default function SuperadminDashboard() {
 
         {/* ── Users & Roles ── */}
         <TabsContent value="users">
-          <Card className="p-4 sm:p-6 bg-card border-border shadow-card">
-            {/* Header + filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <h2 className="font-semibold text-lg">
-                Users & Roles
-                <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredProfiles.length}/{profiles.length})</span>
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search name / email…"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="pl-8 h-8 w-full sm:w-44 bg-secondary border-border text-xs"
-                  />
-                  {userSearch && (
-                    <button onClick={() => setUserSearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                {/* Role filter */}
-                <div className="flex flex-wrap items-center gap-1">
-                  {(["all", "superadmin", "admin", "driver", "user"] as const).map((v) => (
-                    <button key={v}
-                      onClick={() => setUserRoleFilter(v)}
-                      className={`h-7 px-2.5 rounded-full border text-xs transition-colors ${
-                        userRoleFilter === v
-                          ? "bg-primary text-primary-foreground border-primary font-medium"
-                          : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-                      }`}>
-                      {v === "all" ? "All roles" : v}
-                    </button>
-                  ))}
-                </div>
-                {/* Status filter */}
-                <div className="flex items-center rounded-md border border-border overflow-hidden text-xs h-8">
-                  {(["all", "active", "deactivated"] as const).map((v) => (
-                    <button key={v}
-                      onClick={() => setUserStatus(v)}
-                      className={`px-2.5 h-full transition-colors ${
-                        userStatus === v
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
-                      }`}>
-                      {v === "all" ? "All" : v}
-                    </button>
-                  ))}
-                </div>
+          <Card className="p-4 sm:p-6 bg-card border-border shadow-card space-y-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  Users & Roles
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Showing {filteredProfiles.length} of {profiles.length} users
+                </p>
+              </div>
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search name / email…"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-8 h-9 w-full sm:w-52 bg-secondary border-border text-sm"
+                />
+                {userSearch && (
+                  <button onClick={() => setUserSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Role stats strip */}
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                { label: "Superadmin", role: "superadmin", color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+                { label: "Admin",      role: "admin",      color: "text-amber-400",  bg: "bg-amber-500/10 border-amber-500/20" },
+                { label: "Driver",     role: "driver",     color: "text-blue-400",   bg: "bg-blue-500/10 border-blue-500/20" },
+                { label: "User",       role: "user",       color: "text-slate-400",  bg: "bg-slate-500/10 border-slate-500/20" },
+              ] as const).map(({ label, role, color, bg }) => (
+                <button key={role}
+                  onClick={() => setUserRoleFilter(userRoleFilter === role ? "all" : role)}
+                  className={`rounded-lg border p-2.5 text-center transition-all ${bg} ${userRoleFilter === role ? "ring-1 ring-primary" : "hover:opacity-80"}`}>
+                  <div className={`text-lg font-bold ${color}`}>
+                    {roles.filter((r) => r.role === role).length}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-medium mt-0.5">{label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Filters row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setUserRoleFilter("all")}
+                className={`h-7 px-3 rounded-full border text-xs transition-colors font-medium ${
+                  userRoleFilter === "all"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                }`}>
+                All roles
+              </button>
+              <div className="w-px h-5 bg-border" />
+              <div className="flex items-center rounded-lg border border-border overflow-hidden text-xs h-7">
+                {(["all", "active", "deactivated"] as const).map((v) => (
+                  <button key={v}
+                    onClick={() => setUserStatus(v)}
+                    className={`px-3 h-full transition-colors ${
+                      userStatus === v
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {v === "all" ? "All status" : v.charAt(0).toUpperCase() + v.slice(1)}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* User list */}
-            <div className="space-y-2 max-h-[55vh] md:max-h-[520px] overflow-y-auto">
+            <div className="space-y-2 max-h-[55vh] md:max-h-[480px] overflow-y-auto pr-1">
               {filteredProfiles.map((p) => {
                 const r = rolesOf(p.user_id);
                 const isDriverRow = r.includes("driver");
+                const isAdminRow  = r.includes("admin");
                 const locked = isSuperadmin(p.user_id);
+                const initials = (p.display_name || p.email || "?")
+                  .trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+                const avatarCls = locked
+                  ? "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                  : isDriverRow
+                  ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
+                  : isAdminRow
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  : "bg-secondary text-muted-foreground border-border";
                 return (
-                  <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-secondary border border-border">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {isSuperadmin(p.user_id) && <Shield className="w-4 h-4 text-violet-400 shrink-0" title="Superadmin — locked" />}
-                      {isDriverRow && <Car className="w-4 h-4 text-blue-400 shrink-0" title="Driver" />}
+                  <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-border bg-secondary/50 hover:bg-secondary transition-colors">
+                    {/* Avatar + info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 ${avatarCls}`}>
+                        {initials}
+                      </div>
                       <div className="min-w-0">
-                        <div className="font-medium flex flex-wrap items-center gap-1.5">
-                          <span className="truncate">{p.display_name || p.email}</span>
-                          {isSuperadmin(p.user_id) && <Badge className="text-[10px] py-0 px-1.5 bg-violet-500/20 text-violet-300 border-violet-500/30">superadmin</Badge>}
-                          {isDriverRow && <Badge className="text-[10px] py-0 px-1.5 bg-violet-500/20 text-violet-300 border-violet-500/30">driver</Badge>}
+                        <div className="font-medium text-sm flex flex-wrap items-center gap-1.5">
+                          <span className="truncate max-w-[160px]">{p.display_name || p.email}</span>
+                          {locked    && <Badge className="text-[10px] py-0 px-1.5 bg-violet-500/20 text-violet-300 border-violet-500/30">superadmin</Badge>}
+                          {isAdminRow  && <Badge className="text-[10px] py-0 px-1.5 bg-amber-500/20 text-amber-300 border-amber-500/30">admin</Badge>}
+                          {isDriverRow && <Badge className="text-[10px] py-0 px-1.5 bg-blue-500/20 text-blue-300 border-blue-500/30">driver</Badge>}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">{p.email}{p.username ? ` · @${p.username}` : ""}</div>
                       </div>
                     </div>
+
+                    {/* Actions */}
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {locked ? (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Lock className="w-3.5 h-3.5" />Role locked
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground px-2 py-1 rounded-md bg-secondary border border-border">
+                          <Lock className="w-3 h-3" />Role locked
                         </span>
                       ) : (
-                        (["user", "admin", "driver"] as AppRole[]).map((role) => (
-                          <Button key={role} size="sm" variant={r.includes(role) ? "default" : "outline"} onClick={() => setRole(p.user_id, role, !r.includes(role))}>
-                            {role}
-                          </Button>
-                        ))
+                        <div className="flex items-center rounded-lg border border-border overflow-hidden text-xs">
+                          {(["user", "admin", "driver"] as AppRole[]).map((role) => {
+                            const on = r.includes(role);
+                            const cls = on
+                              ? role === "admin"  ? "bg-amber-500/20 text-amber-300"
+                              : role === "driver" ? "bg-blue-500/20 text-blue-300"
+                              :                    "bg-primary/20 text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary";
+                            return (
+                              <button key={role}
+                                onClick={() => setRole(p.user_id, role, !on)}
+                                className={`px-3 h-7 font-medium transition-all border-r border-border last:border-r-0 capitalize ${cls}`}>
+                                {role}
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
-                      <Button size="sm" variant="ghost" disabled={isSuperadmin(p.user_id)} onClick={() => toggleActive(p)}>
-                        <Badge variant="outline" className={p.is_active ? "border-emerald-500/40 text-emerald-400" : "border-red-500/40 text-red-400"}>{p.is_active ? "active" : "deactivated"}</Badge>
-                      </Button>
+                      <button disabled={locked} onClick={() => toggleActive(p)}
+                        className={`h-7 px-2.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                          p.is_active
+                            ? "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                            : "border-red-500/40 text-red-400 hover:bg-red-500/10"
+                        }`}>
+                        {p.is_active ? "Active" : "Inactive"}
+                      </button>
                     </div>
                   </div>
                 );
               })}
               {filteredProfiles.length === 0 && (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  {profiles.length === 0 ? "No users yet." : "No users match the current filters."}
-                </p>
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+                  <Users className="w-8 h-8 opacity-30" />
+                  <p className="text-sm">{profiles.length === 0 ? "No users yet." : "No users match the current filters."}</p>
+                </div>
               )}
             </div>
           </Card>
