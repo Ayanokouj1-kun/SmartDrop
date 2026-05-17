@@ -130,7 +130,6 @@ export default function SuperadminDashboard() {
 
   async function setRole(uid: string, role: AppRole, enable: boolean) {
     if (isSuperadmin(uid)) return toast.error("Superadmin role cannot be modified.");
-    if (rolesOf(uid).includes("driver")) return toast.error("Driver accounts have a fixed role and cannot be changed.");
     if (enable) {
       const { error } = await supabase.from("user_roles").insert({ user_id: uid, role });
       if (error && !error.message.includes("duplicate")) return toast.error(error.message);
@@ -454,12 +453,12 @@ export default function SuperadminDashboard() {
               {filteredProfiles.map((p) => {
                 const r = rolesOf(p.user_id);
                 const isDriverRow = r.includes("driver");
-                const locked = isSuperadmin(p.user_id) || isDriverRow;
+                const locked = isSuperadmin(p.user_id);
                 return (
                   <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-secondary border border-border">
                     <div className="flex items-center gap-2 min-w-0">
                       {isSuperadmin(p.user_id) && <Shield className="w-4 h-4 text-violet-400 shrink-0" title="Superadmin — locked" />}
-                      {isDriverRow && <Car className="w-4 h-4 text-violet-400 shrink-0" title="Driver — locked" />}
+                      {isDriverRow && <Car className="w-4 h-4 text-blue-400 shrink-0" title="Driver" />}
                       <div className="min-w-0">
                         <div className="font-medium flex flex-wrap items-center gap-1.5">
                           <span className="truncate">{p.display_name || p.email}</span>
@@ -472,10 +471,10 @@ export default function SuperadminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       {locked ? (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Lock className="w-3.5 h-3.5" />{isDriverRow ? "Driver — role fixed" : "Role locked"}
+                          <Lock className="w-3.5 h-3.5" />Role locked
                         </span>
                       ) : (
-                        (["user", "admin"] as AppRole[]).map((role) => (
+                        (["user", "admin", "driver"] as AppRole[]).map((role) => (
                           <Button key={role} size="sm" variant={r.includes(role) ? "default" : "outline"} onClick={() => setRole(p.user_id, role, !r.includes(role))}>
                             {role}
                           </Button>
